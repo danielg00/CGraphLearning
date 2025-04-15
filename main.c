@@ -17,18 +17,17 @@ float dot_product(void) {
 
 int * get_array_size(FILE * f) {
     int * dimension = malloc(2 * sizeof(int));
-    char buffer[6];
+    char buffer[7];
+    buffer[7] = '\0';
     fread(buffer, 1, 6, f);
-    char file_name[] = {0x93, 'N', 'U', 'M', 'P', 'Y'};
-    printf("%s \n", file_name);
-    printf("%s", buffer);
-    /* assert(memcmp(buffer, file_name, sizeof(buffer)) && "dasdas"); */
+    char file_name[] = {0x93, 'N', 'l', 'M', 'P', 'Y', '\0'};  // FIX
+    assert(memcmp(buffer, file_name, 6) && "dasdas");
 	
-    char dummy[2]; /* FILE VERSIONS - DONT CARE */
+    char dummy[2]; //FILE VERSIONS - DONT CARE
     fread(&dummy[0], 1, 1, f);
     fread(&dummy[1], 1, 1, f);
 
-    unsigned short int len; /* HEADER LENGTH */
+    unsigned short int len; // HEADER LENGTH
     fread(&len, 2, 1, f);
 
     
@@ -46,7 +45,7 @@ int * get_array_size(FILE * f) {
     fscanf(f, "(%d,%d)", &dimension[0], &dimension[1]);
 
     
-    int offset = (floor(len/64) + 1) * 64; /* MOVE POINTER TO START OF FLOAT VALUES */
+    int offset = (floor(len/64) + 1) * 64; // MOVE POINTER TO START OF FLOAT VALUES
     fseek(f, offset, SEEK_SET);
     return dimension;
 }

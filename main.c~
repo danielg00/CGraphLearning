@@ -19,9 +19,10 @@ int * get_array_size(FILE * f) {
     int * dimension = malloc(2 * sizeof(int));
     char buffer[6];
     fread(buffer, 1, 6, f);
-    
-    /* buffer[7] = '\0'; */
-    /* assert(strcmp("\x93NUMPY", buffer)); */
+    char file_name[] = {0x93, 'N', 'U', 'M', 'P', 'Y'};
+    printf("%s \n", file_name);
+    printf("%s", buffer);
+    /* assert(memcmp(buffer, file_name, sizeof(buffer)) && "dasdas"); */
 	
     char dummy[2]; /* FILE VERSIONS - DONT CARE */
     fread(&dummy[0], 1, 1, f);
@@ -65,12 +66,10 @@ float ** load_array_from_file(FILE * f, int * dim) {
 
 int main() {
     FILE * f = fopen("test_d.npy", "rb");
-
- 
     
     int * dim = get_array_size(f);
     
-    printf("dim -> (%d %d) \n", dim[0], dim[1]);
+    printf("\n dim -> (%d %d) \n", dim[0], dim[1]);
     
     float ** array = load_array_from_file(f, dim);
     for (int i = 0; i < dim[0]; i++)
