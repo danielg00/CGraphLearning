@@ -1,0 +1,10 @@
+import ctypes
+
+lib = cdll.LoadLibrary("/home/daniel/Code/D_projects/dag_algorithms/main.so")
+
+func = lib.your_name
+
+func.argtypes = [c_char_p]
+func.restypes = c_char_p
+
+print(func(b"daniel"))
