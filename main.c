@@ -3,17 +3,10 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include "linalg.h"
 
-/* #include "graph.h" */
+/* #include[ "graph.h" */
 
-
-float index_val(int i, int j, float ** array) {
-    return array[i][j];
-}
-
-float dot_product(void) {
-    return 0;
-}
 
 int * get_array_size(FILE * f) {
     int * dimension = malloc(2 * sizeof(int));
@@ -64,7 +57,7 @@ float ** load_array_from_file(FILE * f, int * dim) {
 }
 
 int main() {
-    FILE * f = fopen("test_d.npy", "rb");
+    FILE * f = fopen("test_data/test_d.npy", "rb");
     
     int * dim = get_array_size(f);
     
