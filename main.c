@@ -5,13 +5,10 @@
 #include <assert.h>
 #include "linalg.h"
 
-/* #include[ "graph.h" */
-
-
 int * get_array_size(FILE * f) {
     int * dimension = malloc(2 * sizeof(int));
     char buffer[7];
-    buffer[7] = '\0';
+    /* buffer[7] = '\0'; */
     fread(buffer, 1, 6, f);
     char file_name[] = {0x93, 'N', 'l', 'M', 'P', 'Y', '\0'};  // FIX
     assert(memcmp(buffer, file_name, 6) && "dasdas");
@@ -43,13 +40,13 @@ int * get_array_size(FILE * f) {
     return dimension;
 }
 
-float ** load_array_from_file(FILE * f, int * dim) {
-    float ** array = malloc(dim[0]*sizeof(float *));
+double ** load_array_from_file(FILE * f, int * dim) {
+    double ** array = malloc(dim[0]*sizeof(float *));
 
     for (int i = 0; i < dim[0]; i++)
 	{
-	    array[i] = malloc(dim[1]*sizeof(float));
-	    fread(array[i], sizeof(float), dim[1], f);
+	    array[i] = malloc(dim[1]*sizeof(double));
+	    fread(array[i], sizeof(double), dim[1], f);
 	}
     
     assert(fgetc(f) == EOF && "EOF NOT REACHED AFTER READING MATRIX VALUES");
@@ -63,17 +60,17 @@ int main() {
     
     printf("\n dim -> (%d %d) \n", dim[0], dim[1]);
     
-    float ** array = load_array_from_file(f, dim);
-    for (int i = 0; i < dim[0]; i++)
-	{
-	    for (int j = 0; j < dim[1]; j++)
-		{
-		    printf("%f ", array[i][j]);
-		}
-	    printf("\n");
-	}
-    
-    
+    double ** array = load_array_from_file(f, dim);
+    matrix * A = malloc(sizeof(*A));
+    A->dims = malloc(2*sizeof(int));
+    A->dims[0] = 6; A->dims[1] = 6;
+    A->data = array;
+    printf(" asd %f sdddsa", A->data[0][0]);
+    double *** ret_v;
+    ret_v = LU_decomposition(A);
+    printf("\n %f", ret_v[0][3][2]);
+    printf("\n %f", ret_v[1][2][3]);
+	
     return 0;
 }
 
