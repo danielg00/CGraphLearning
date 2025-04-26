@@ -1,3 +1,7 @@
 [#]*
 *~
 test_data/*
+main
+*.so
+*.py
+

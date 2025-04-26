@@ -1,26 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "linalg.h"
 
 
 double *** LU_decomposition(matrix * A)
 {
-    /* LU decomposition with pivoting.
+    /* LU decomposition with pivoting. (see https://en.wikipedia.org/wiki/LU_decomposition)
+       
+       
        Function is used as way to invert matrix, so (1) matrix `A` will be altered but we
        won't need it after function call anyways, and (2) `L` and `U` aren't filled with zeros
        but are a sequence of pointers to arrays of shrinking/growing size.
 
        TODO:
-       Implement pivots
-       Check if matrix is singular and check if it is square.
+       - Implement pivots; might have to wrap return value in a struct
+       - Check if matrix is singular and check if it is square.
+       - Find some way to free L and U automatically, maybe pass L and U by ref.
       
      */
     
     double ** L;
     double ** U;
+
     int D = A->dims[0];
 
-    L = malloc(D*sizeof(double *));   // initialise lower triangular matrix.
+    L = malloc(D*sizeof(double *));   // initialise lower triangular matrix with identity on diagonal.
     U = malloc(D*sizeof(double *));   // initialise upper triangular matrix.
     for (int i = 0; i < D; i++)
 	{
@@ -33,7 +38,6 @@ double *** LU_decomposition(matrix * A)
     for (int n = 0; n < D-1; n++)
 	{
 	    U[n][n] = A->data[n][n];
-	    
 	    for (int i = n + 1; i < D; i++)
 		{
 		    L[i][n] = (1/A->data[n][n])*A->data[i][n];   // L[n+1:, n] = l
