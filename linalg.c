@@ -59,11 +59,12 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
 	    A->data[max_val_index] = A->data[n];
 	    A->data[n] = ptrRow;
 
-	    j = pivots[max_val_index];
-	    pivots[n] = pivots[max_val_index];
+	    
+	    j = pivots[n];
+	    pivots[n] = pivots[max_val_index]; /// <======= CAUSING ISSUES HRMMMMM 
 	    pivots[max_val_index] = j;
 	}
-    
+   
 
     /* ====== LU decomposition - Doolittle's algorithm. ======*/
     for (int n = 0; n < D; n++)
@@ -83,6 +84,7 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
 			}
 		}
 	}
+    
     return pivots;
 }
 
@@ -98,22 +100,30 @@ matrix * invert_matrix(matrix * A)
     double **L, **U;
     int idx;
     int *pivots = LU_decomposition(A, &L, &U);
+
     
     matrix * B = malloc(sizeof(*B));
     
     B->data = malloc((A->dims[0])*sizeof(double *));
-    B->dims = malloc(2*sizeof(double));
-    memcpy(&(B->dims), &(A->dims), 2*sizeof(int));
+    B->dims = malloc(2*sizeof(int));
+    memcpy((B->dims), (A->dims), 2*sizeof(int));
+
     
     for (int i = 0; i < A->dims[0]; i++)
 	{
+	    B->data[i] = calloc(A->dims[0], sizeof(double));
+	}
+	        
+    for (int i = 0; i < A->dims[0]; i++)                                      // Transpose permutation matrix
+	{
 	    idx = pivots[i];
-	    B->data[idx] = calloc(A->dims[0], sizeof(double));
-	    
-	    B->data[i][idx] = 1.;
+	    B->data[idx][i] = 1.;
+	}
 
-	    solve_Ax_b(L, &(B->data[idx]), A->dims[0], 0);
-	    solve_Ax_b(U, &(B->data[idx]),  A->dims[0], 1);
+    for (int i = 0; i < A->dims[0]; i++)                                      // Solving with each row of P.T matrix
+	{
+	    solve_Ax_b(L, &(B->data[i]), A->dims[0], 0);
+	    solve_Ax_b(U, &(B->data[i]),  A->dims[0], 1);
 	}
     
     return B;  // !! B is transposed !!

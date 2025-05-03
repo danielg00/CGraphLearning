@@ -62,8 +62,8 @@ int main() {
        
     matrix * inv;
     inv = invert_matrix(A);
-
-    printf("FINAL: %f", inv->data[0][0]);
+    
+    /* printf("FINAL: %f", inv->data[0][0]); */
 	
     return 0;
 }
