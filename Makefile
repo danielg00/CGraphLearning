@@ -1,3 +1,3 @@
 main: main.c
-	gcc  -Wno-unused-result -O3 -Wall main.c linalg.c -o main
+	gcc -g -Wno-unused-result -O0 -Wall main.c linalg.c -o main
 	./main

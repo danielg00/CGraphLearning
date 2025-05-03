@@ -41,7 +41,7 @@ int * get_array_size(FILE * f) {
 }
 
 double ** load_array_from_file(FILE * f, int * dim) {
-    double ** array = malloc(dim[0]*sizeof(float *));
+    double ** array = malloc(dim[0]*sizeof(double *));
 
     for (int i = 0; i < dim[0]; i++)
 	{
@@ -56,20 +56,14 @@ double ** load_array_from_file(FILE * f, int * dim) {
 int main() {
     FILE * f = fopen("test_data/test_d.npy", "rb");
     
-    int * dim = get_array_size(f);
-    
-    printf("\n dim -> (%d %d) \n", dim[0], dim[1]);
-    
-    double ** array = load_array_from_file(f, dim);
     matrix * A = malloc(sizeof(*A));
-    A->dims = malloc(2*sizeof(int));
-    A->dims[0] = 6; A->dims[1] = 6;
-    A->data = array;
-    printf(" asd %f sdddsa", A->data[0][0]);
-    double *** ret_v;
-    ret_v = LU_decomposition(A);
-    printf("\n %f", ret_v[0][3][2]);
-    printf("\n %f", ret_v[1][2][3]);
+    A->dims = get_array_size(f);
+    A->data = load_array_from_file(f, A->dims);
+       
+    matrix * inv;
+    inv = invert_matrix(A);
+
+    printf("FINAL: %f", inv->data[0][0]);
 	
     return 0;
 }
