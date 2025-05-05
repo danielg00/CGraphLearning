@@ -3,7 +3,56 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+
 #include "linalg.h"
+
+
+matrix * invert_matrix(matrix * A)
+{
+    /*
+      Constructs L and U arrays from LU-decomposition and solves for the inverse
+      using backward and forward substitution.
+
+      Note, that LU_decomposition modifies A in place.
+
+      
+     */
+
+    double **L, **U;
+    int idx;
+    int *pivots = LU_decomposition(A, &L, &U);
+    matrix * B = malloc(sizeof(*B));
+    
+    B->data = malloc((A->dims[0])*sizeof(double *));
+    B->dims = malloc(2*sizeof(int));
+    memcpy((B->dims), (A->dims), 2*sizeof(int));
+
+    
+    for (int i = 0; i < A->dims[0]; i++)
+	{
+	    B->data[i] = calloc(A->dims[0], sizeof(double));
+	}
+	        
+    for (int i = 0; i < A->dims[0]; i++)                                      // Transpose/inverse of permutation matrix
+	{
+	    idx = pivots[i];
+	    B->data[idx][i] = 1.;
+	}
+
+    for (int i = 0; i < A->dims[0]; i++)                                      // Solving with each row of P.T matrix
+	{
+	    solve_Ax_b(L, &(B->data[i]), A->dims[0], 0);
+	    solve_Ax_b(U, &(B->data[i]),  A->dims[0], 1);
+	}
+    
+    freeArray(L, A->dims[0]);
+    freeArray(U, A->dims[0]);
+    
+    free(pivots);
+    
+    return B;  // !! B is transposed !!
+}
+
 
 
 int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
@@ -11,9 +60,7 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
     /* LU decomposition with pivoting. (see https://en.wikipedia.org/wiki/LU_decomposition)
        
        
-       Function is used as way to invert matrix, so (1) matrix `A` will be altered but we
-       won't need it after function call anyways, and (2) `L` and `U` aren't filled with zeros
-       but are a sequence of pointers to arrays of shrinking/growing size.
+       Function is used as way to invert a matrix. 
 
        TODO:
        - Check if matrix is singular and check if it is square, make return value specify this if true.
@@ -22,12 +69,12 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
     int D = A->dims[0];
 
     *ptrL = malloc(D*sizeof(double *));   
-    *ptrU = malloc(D*sizeof(double *));   // initialise upper triangular matrix.
+    *ptrU = malloc(D*sizeof(double *));  
     
     for (int i = 0; i < D; i++)
 	{
 	    (*ptrL)[i] = calloc(D, sizeof(double));                           // Learned the hard way that its safer to make them square.
-	    (*ptrL)[i][i] = 1.0;	// initialise lower triangular matrix with identity on diagonal.
+	    (*ptrL)[i][i] = 1.0;	                                      // initialise lower triangular matrix with identity on diagonal.
 
 	    (*ptrU)[i] = calloc(D, sizeof(double)); 
 	}
@@ -61,7 +108,7 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
 
 	    
 	    j = pivots[n];
-	    pivots[n] = pivots[max_val_index]; /// <======= CAUSING ISSUES HRMMMMM 
+	    pivots[n] = pivots[max_val_index];
 	    pivots[max_val_index] = j;
 	}
    
@@ -89,49 +136,9 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
 }
 
 
-matrix * invert_matrix(matrix * A)
-{
-    /*
-      TAKES L and U arrays from LU decomposition and solves for the inverse. Not that the rows of L are permuted so it's
-      not a lower triangular matrix in standard form.
-      Let L, U be the decomp of matrix X and let Z be its inverse. Let I be the indentity matrix and P be the permutation matrix.
-     */
-
-    double **L, **U;
-    int idx;
-    int *pivots = LU_decomposition(A, &L, &U);
-
-    
-    matrix * B = malloc(sizeof(*B));
-    
-    B->data = malloc((A->dims[0])*sizeof(double *));
-    B->dims = malloc(2*sizeof(int));
-    memcpy((B->dims), (A->dims), 2*sizeof(int));
-
-    
-    for (int i = 0; i < A->dims[0]; i++)
-	{
-	    B->data[i] = calloc(A->dims[0], sizeof(double));
-	}
-	        
-    for (int i = 0; i < A->dims[0]; i++)                                      // Transpose permutation matrix
-	{
-	    idx = pivots[i];
-	    B->data[idx][i] = 1.;
-	}
-
-    for (int i = 0; i < A->dims[0]; i++)                                      // Solving with each row of P.T matrix
-	{
-	    solve_Ax_b(L, &(B->data[i]), A->dims[0], 0);
-	    solve_Ax_b(U, &(B->data[i]),  A->dims[0], 1);
-	}
-    
-    return B;  // !! B is transposed !!
-}
-
-
 
 void solve_Ax_b(double **A, double **b, int D, int upper)
+// Solves a system of linear equations, modidies b
 {
     double sum;
     switch (upper)
@@ -183,3 +190,81 @@ double ** matmul(matrix * A, matrix * B)
 	    
     return C;
 }
+
+
+
+void freeArray(double ** array, int dim0) // Frees each row first and then frees initial pointer array.
+{
+    for (int i = 0; i < dim0; i++)
+	{
+	    free(array[i]);
+	}
+    free(array);
+}
+
+void alloc_array(matrix *A)
+{
+    A->data = malloc(A->dims[0] * sizeof(double *));
+    for (int i = 0; i < dims[0]; i++)
+	{
+	    A->data[i] = malloc(A->dims[1] * sizeof(double));
+	}
+}
+
+void freeMatrix(matrix *M)
+{
+    freeArray(M->data, M->dims[0]);
+    free(M->dims);
+    free(M);
+}
+
+void printArray(double **Array, int dim0, int dim1)
+{
+    printf("\n====================\n");
+    for (int i = 0; i < dim0; i++)
+	{
+	    for (int j = 0; j < dim1; j++)
+		{
+		    printf(" %f ", Array[i][j]);
+		}
+	    printf(" \n ");
+	}
+    printf("\n====================\n");
+
+}
+
+
+double variance_of_residuals(matrix *X, double *Y)
+{
+    // First calculate regression coefficients using [(X X.T)^-1]X.Ty
+    // X X.T is symmetric so transpose of inverse(X X.T) doesnt matter
+
+    matrix * xtx - malloc(sizeof(*B));
+    xtx->dims = malloc(2 * sizeof(int));
+    alloc_array(xtx);
+    
+    xtx->dims[0] = X->dims[0];
+    xtx->dims[1] = X->dims[0];
+
+    double dot;
+    for (int i = 0; i < (X->dims[0]/2)+1; i++)  // Gram matrix; dotting every row with eachother.
+	{
+	    for (int j = 0; j < X->dims[0]; j++)
+		dot = 0;
+		{
+		    for (int k = 0; k < X->dims[1]; k++)
+			{
+			    dot += X->data[i][k]*X->data[j][k];
+			}
+		    xtx->data[i][j] = dot;
+		    xtx->data[j][i] = dot;
+		}
+	}
+    matrix *NEXT = inverse(xtx);
+    freeMatrix(xtx);
+
+    // FINISH
+}
+    
+	    
+		
