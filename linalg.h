@@ -4,7 +4,7 @@ typedef struct {
 } matrix;
 
 
-double ** matmul(matrix * A, matrix * B);
+matrix *matmul(matrix * A, matrix * B);
 int * LU_decomposition(matrix * A, double *** L, double *** U);
 matrix * invert_matrix(matrix * A);
 void solve_Ax_b(double **A, double **b, int D, int upper);

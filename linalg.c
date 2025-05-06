@@ -1,13 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <math.h>
 #include <string.h>
 
 #include "linalg.h"
 
 
-matrix * invert_matrix(matrix * A)
+matrix *invert_matrix(matrix * A)
 {
     /*
       Constructs L and U arrays from LU-decomposition and solves for the inverse
@@ -55,7 +54,7 @@ matrix * invert_matrix(matrix * A)
 
 
 
-int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
+int * LU_decomposition(matrix *A, double *** ptrL, double *** ptrU)
 {
     /* LU decomposition with pivoting. (see https://en.wikipedia.org/wiki/LU_decomposition)
        
@@ -67,6 +66,8 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
     */
 
     int D = A->dims[0];
+    matrix *A = malloc(sizeof(*A));
+
 
     *ptrL = malloc(D*sizeof(double *));   
     *ptrU = malloc(D*sizeof(double *));  
@@ -131,7 +132,8 @@ int * LU_decomposition(matrix * A, double *** ptrL, double *** ptrU)
 			}
 		}
 	}
-    
+
+    freeMatrix(Ad)
     return pivots;
 }
 
@@ -171,19 +173,22 @@ void solve_Ax_b(double **A, double **b, int D, int upper)
 }
 
 
-double ** matmul(matrix * A, matrix * B)
+matrix *matmul(matrix * A, matrix * B)
 {
     assert(A->dims[1] == B->dims[0] && "Matrix dimensions are incompatabilble.");
-    
-    double ** C = malloc(A->dims[0]*sizeof(double *));
+
+    matrix *C = malloc(sizeof(*C));
+    C->dims[0] = A->dims[0]; C->dims[1] = A->dims[1];
+				 
+    C->data = malloc(C->dims[0]*sizeof(double *));
     for (int row = 0; row < A->dims[0]; row++)
 	{
-	    C[row] = calloc(B->dims[1], sizeof(double));
+	    C->data[row] = calloc(C->dims[1], sizeof(double));
 	    for (int i = 0; i < A->dims[1]; i++)
 		{
 		    for (int j = 0; j < B->dims[0]; j++)
 			{
-			    C[row][j] += A->data[row][i]*B->data[i][j];
+			    C->data[row][j] += A->data[row][i]*B->data[i][j];
 			}
 		}
 	}
@@ -202,14 +207,16 @@ void freeArray(double ** array, int dim0) // Frees each row first and then frees
     free(array);
 }
 
+
 void alloc_array(matrix *A)
 {
     A->data = malloc(A->dims[0] * sizeof(double *));
-    for (int i = 0; i < dims[0]; i++)
+    for (int i = 0; i < A->dims[0]; i++)
 	{
 	    A->data[i] = malloc(A->dims[1] * sizeof(double));
 	}
 }
+
 
 void freeMatrix(matrix *M)
 {
@@ -217,6 +224,7 @@ void freeMatrix(matrix *M)
     free(M->dims);
     free(M);
 }
+
 
 void printArray(double **Array, int dim0, int dim1)
 {
@@ -236,10 +244,11 @@ void printArray(double **Array, int dim0, int dim1)
 
 double variance_of_residuals(matrix *X, double *Y)
 {
-    // First calculate regression coefficients using [(X X.T)^-1]X.Ty
-    // X X.T is symmetric so transpose of inverse(X X.T) doesnt matter
+    // First calculate regression coefficients using [(X.T X)^-1] X.T y
+    // X X.T is symmetric so transpose of inverse(X.T X) doesnt matter
+    // Samples are row wise not column-wise. 
 
-    matrix * xtx - malloc(sizeof(*B));
+    matrix * xtx = malloc(sizeof(*xtx));
     xtx->dims = malloc(2 * sizeof(int));
     alloc_array(xtx);
     
@@ -247,23 +256,68 @@ double variance_of_residuals(matrix *X, double *Y)
     xtx->dims[1] = X->dims[0];
 
     double dot;
-    for (int i = 0; i < (X->dims[0]/2)+1; i++)  // Gram matrix; dotting every row with eachother.
+    for (int i = 0; i < X->dims[0]; i++)  // Gram matrix; dotting every row with eachother.
 	{
-	    for (int j = 0; j < X->dims[0]; j++)
-		dot = 0;
+	    dot = 0;
+	    for (int j = i; j < X->dims[0]; j++)
 		{
 		    for (int k = 0; k < X->dims[1]; k++)
 			{
-			    dot += X->data[i][k]*X->data[j][k];
+			    xtx->data[i][j] += X->data[i][k]*X->data[j][k];
+			    xtx->data[j][i] += X->data[i][k]*X->data[j][k];
 			}
-		    xtx->data[i][j] = dot;
-		    xtx->data[j][i] = dot;
 		}
 	}
-    matrix *NEXT = inverse(xtx);
+    
+    matrix *Inv = invert_matrix(xtx);
     freeMatrix(xtx);
 
-    // FINISH
+    matrix *C = matmul(Inv, X);
+    double betas[X->dims[0]];  // Slopes
+    double B; // Bias term
+    for (int i = 0; i < X->dims[0]; i++)
+	{
+	    dot = 0;
+	    for (int j = 0; j < X->dims[1]; j++)
+		{
+		    dot += Y[j]*C->data[i][j];
+		}
+	    betas[i] = dot;
+	}
+    
+    // Calculating intercept. / mean of Y  - sample mean of each feature times its slope
+    double mu_Y = 0;
+    for (int i = 0; i < X->dims[1]; i++) {mu_Y += Y[i]; }
+    mu_Y /= X->dims[1];
+
+    mu_XB = 0;
+    for (int i = 0; i < X->dims[0]; i++)
+	{
+	    for (int j = 0; j < X->dims[1]; j++)
+		{
+		    mu_XB += X->data[i][j];  // Sum of samples of feature j.
+		}
+	    mu_XB *= betas[i]/X->dims[1];
+	}
+    double intercept = mu_Y - mu_XB;
+
+    // Calculate the variance of residuals.
+    double VOR, dot;
+    VOR = 0;
+    for (int i = 0; i < X->dims[1]; i++)
+	{
+	    dot = 0
+	    for (int j = 0; j < X->dims[0]; j++)
+		{
+		    dot += X->data[j][i] * betas[j]
+		}
+	    VOR += (Y[i] - dot)**2;
+	}
+    
+    VOR /= (X->dims[1] + 1);
+    
+    return VOR;
+
 }
     
 	    

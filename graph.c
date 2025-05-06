@@ -3,7 +3,9 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+
 #include "graph.h"
+#include "score.h"
 
 
 // 2 Philosophies:
@@ -18,19 +20,34 @@
 DAG *unicycle_graph();
 DAG *nocycle_graph();
 DAG *disjoint_1cycle_graph();
+int graph_test();
 
 void add_child(vertex *v, vertex *child)  // Add checks,
 {
-    v->children[v->num_children] = child;
-    v->num_children += 1;
-    
-    child->children[child->num_parents] = v;
-    v->num_parents += 1;
+    v->children[v->num_children++] = child;
+    child->parents[child->num_parents ++] = v;
+}
+
+void delete_child(vertex *v, vertex *child)
+{
+    v->children[v->num_children--] = 0;   // IS THIS SAFE?
+    child->parents[child->num_parents--] = 0;
 }
 
 
-DAG *init_graph(int num_nodes)
+double score_if_add_parent(DAG *G, vertex *v, vertex *parent)
 {
+    double score;
+    add_child(parent, v);
+    score = BIC_score(v);
+    delete_child(parent, v);
+    return score
+}
+
+
+DAG *init_graph(matrix *data)  // Each row of data are observations for a feature. 
+{
+    int num_nodes = data->dims[0];
     DAG *G = malloc(sizeof(*G));
     G->nodes = malloc(num_nodes*sizeof(vertex));
     G->num_nodes = num_nodes;
@@ -43,61 +60,14 @@ DAG *init_graph(int num_nodes)
 	    
 	    G->nodes[i].num_children = 0;
 	    G->nodes[i].children = calloc(num_nodes, sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT.
+
+	    G->nodes[i]->data = data[i];
+	    G->nodes[i]->num_samples = data->dims[1];
+		
 	}
     return G;
 }
 
-
-DAG *unicycle_graph()  // 1 -> 2 -> ... -> 4 -> 1 ...
-{
-    DAG *G = init_graph(5);
-    add_child(&(G->nodes[4]), &(G->nodes[0]));
-    for (int i = 1; i < 5; i++)
-	{
-	    add_child(&(G->nodes[i-1]), &(G->nodes[i]));
-	}
-
-    return G;
-}
-
-
-
-DAG *nocycle_graph()  // 1 -> 2 -> ... -> 4 ...
-{
-    DAG *G = init_graph(5);
-    for (int i = 1; i < 5; i++)
-	{
-	    add_child(&(G->nodes[i-1]), &(G->nodes[i]));
-	}
-
-    return G;
-}
-
-DAG *disjoint_1cycle_graph()  // 1 -> 2 -> 3; 4 -> 5 -> 6 -> 4
-{
-    DAG *G = init_graph(6);
-    
-    add_child(&(G->nodes[0]), &(G->nodes[1]));
-    add_child(&(G->nodes[1]), &(G->nodes[2]));
-    add_child(&(G->nodes[0]), &(G->nodes[2]));
-    
-    add_child(&(G->nodes[3]), &(G->nodes[4]));
-    add_child(&(G->nodes[4]), &(G->nodes[5]));
-    add_child(&(G->nodes[3]), &(G->nodes[5]));
-
-    return G;
-}
-
-
-int graph_test()
-{
-    DAG *G = disjoint_1cycle_graph();
-    int C = check_cyclic(G);
-    printf("\n cycle: %d", C);
-
-    free(G);
-    return 0;
-}
 
 
 int check_list(vertex current_node, int *checked_vertices) // returns 1 if current node is in node list.
@@ -139,22 +109,6 @@ int check_node_in_cycle(vertex current_node, int *checked_vertices) // Want to t
     return 0;  // No cycles found if it reaches this part.
 }
 
-
-void free_graph(DAG *G)
-{
-    int D = G->num_nodes;
-    for (int i = 0; i < D; i++)
-	{
-	    free(G->nodes[i].children);
-	    free(G->nodes[i].parents);
-
-	}
-    free(G->nodes);
-    free(G);
-}
-    
-
-
     
 int check_cyclic(DAG *G)  // This is slighly broken; it assumes every node has only one child. need at another loop over children.
 {
@@ -184,4 +138,72 @@ int check_cyclic(DAG *G)  // This is slighly broken; it assumes every node has o
 		}
 	}
     return C;  // Returns 1 if G is cyclic.
+}
+
+
+void free_graph(DAG *G)
+{
+    int D = G->num_nodes;
+    for (int i = 0; i < D; i++)
+	{
+	    free(G->nodes[i].children);
+	    free(G->nodes[i].parents);
+
+	}
+    free(G->nodes);
+    free(G);
+}
+
+
+// ==================== TOY GRAPH FUNCTIONS =================
+
+/* DAG *unicycle_graph()  // 1 -> 2 -> ... -> 4 -> 1 ... */
+/* { */
+/*     DAG *G = init_graph(5); */
+/*     add_child(&(G->nodes[4]), &(G->nodes[0])); */
+/*     for (int i = 1; i < 5; i++) */
+/* 	{ */
+/* 	    add_child(&(G->nodes[i-1]), &(G->nodes[i])); */
+/* 	} */
+
+/*     return G; */
+/* } */
+
+
+
+/* DAG *nocycle_graph()  // 1 -> 2 -> ... -> 4 ... */
+/* { */
+/*     DAG *G = init_graph(5); */
+/*     for (int i = 1; i < 5; i++) */
+/* 	{ */
+/* 	    add_child(&(G->nodes[i-1]), &(G->nodes[i])); */
+/* 	} */
+
+/*     return G; */
+/* } */
+
+/* DAG *disjoint_1cycle_graph()  // 1 -> 2 -> 3; 4 -> 5 -> 6 -> 4 */
+/* { */
+/*     DAG *G = init_graph(6); */
+    
+/*     add_child(&(G->nodes[0]), &(G->nodes[1])); */
+/*     add_child(&(G->nodes[1]), &(G->nodes[2])); */
+/*     add_child(&(G->nodes[0]), &(G->nodes[2])); */
+    
+/*     add_child(&(G->nodes[3]), &(G->nodes[4])); */
+/*     add_child(&(G->nodes[4]), &(G->nodes[5])); */
+/*     add_child(&(G->nodes[3]), &(G->nodes[5])); */
+
+/*     return G; */
+/* } */
+
+
+int graph_test()
+{
+    DAG *G = disjoint_1cycle_graph();
+    int C = check_cyclic(G);
+    printf("\n cycle: %d", C);
+
+    free(G);
+    return 0;
 }
