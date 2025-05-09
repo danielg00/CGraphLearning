@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "linalg.h"
 
@@ -54,7 +55,7 @@ matrix *invert_matrix(matrix * A)
 
 
 
-int * LU_decomposition(matrix *A, double *** ptrL, double *** ptrU)
+int * LU_decomposition(matrix *Ad, double *** ptrL, double *** ptrU)
 {
     /* LU decomposition with pivoting. (see https://en.wikipedia.org/wiki/LU_decomposition)
        
@@ -65,9 +66,12 @@ int * LU_decomposition(matrix *A, double *** ptrL, double *** ptrU)
        - Check if matrix is singular and check if it is square, make return value specify this if true.
     */
 
-    int D = A->dims[0];
-    matrix *A = malloc(sizeof(*A));
+    int D = Ad->dims[0];
 
+    matrix *A = malloc(sizeof(*A));
+    A->dims = calloc(2, sizeof(int));
+    A->data = malloc(A->dims[1] * sizeof(double*));
+    memcpy(A->dims, Ad->dims, 2 * sizeof(int));
 
     *ptrL = malloc(D*sizeof(double *));   
     *ptrU = malloc(D*sizeof(double *));  
@@ -77,7 +81,10 @@ int * LU_decomposition(matrix *A, double *** ptrL, double *** ptrU)
 	    (*ptrL)[i] = calloc(D, sizeof(double));                           // Learned the hard way that its safer to make them square.
 	    (*ptrL)[i][i] = 1.0;	                                      // initialise lower triangular matrix with identity on diagonal.
 
-	    (*ptrU)[i] = calloc(D, sizeof(double)); 
+	    (*ptrU)[i] = calloc(D, sizeof(double));
+
+	    A->data[i] = malloc(A->dims[1] * sizeof(double));
+	    memcpy(A->data[i], Ad->data[i], A->dims[1]*sizeof(double));
 	}
 
     
@@ -133,7 +140,7 @@ int * LU_decomposition(matrix *A, double *** ptrL, double *** ptrU)
 		}
 	}
 
-    freeMatrix(Ad)
+    freeMatrix(A);
     return pivots;
 }
 
@@ -274,7 +281,6 @@ double variance_of_residuals(matrix *X, double *Y)
 
     matrix *C = matmul(Inv, X);
     double betas[X->dims[0]];  // Slopes
-    double B; // Bias term
     for (int i = 0; i < X->dims[0]; i++)
 	{
 	    dot = 0;
@@ -290,7 +296,7 @@ double variance_of_residuals(matrix *X, double *Y)
     for (int i = 0; i < X->dims[1]; i++) {mu_Y += Y[i]; }
     mu_Y /= X->dims[1];
 
-    mu_XB = 0;
+    double mu_XB = 0;
     for (int i = 0; i < X->dims[0]; i++)
 	{
 	    for (int j = 0; j < X->dims[1]; j++)
@@ -302,16 +308,16 @@ double variance_of_residuals(matrix *X, double *Y)
     double intercept = mu_Y - mu_XB;
 
     // Calculate the variance of residuals.
-    double VOR, dot;
+    double VOR;
     VOR = 0;
     for (int i = 0; i < X->dims[1]; i++)
 	{
-	    dot = 0
+	    dot = 0;
 	    for (int j = 0; j < X->dims[0]; j++)
 		{
-		    dot += X->data[j][i] * betas[j]
+		    dot += (X->data[j][i] * betas[j]) + intercept;
 		}
-	    VOR += (Y[i] - dot)**2;
+	    VOR += (Y[i] - dot)*(Y[i] - dot);
 	}
     
     VOR /= (X->dims[1] + 1);

@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "graph.h"
-#include "score.h"
+#include "score_functions.h"
 
 
 // 2 Philosophies:
@@ -22,52 +22,58 @@ DAG *nocycle_graph();
 DAG *disjoint_1cycle_graph();
 int graph_test();
 
+
+void delete_edge(vertex *v, vertex *child)
+{
+    printf("DELETING %d --> %d\n", v->id, child->id);
+
+    int index = v->num_children;  // If child not in children then it just skips
+    for (int i = 0; i < v->num_children; i++)
+	{
+	    if (v->children[i] == child) {index = i; break;}
+	}
+
+    
+    for (; index < v->num_children; index++)
+	{
+	    v->children[index] = v->children[index+1];
+	}
+	
+    v->num_children--;
+    if (v->num_children < 0) {printf("!!!!!CANT DELETE %d --> %d !!!!!!\n", v->id, child->id);}
+    
+    index = child->num_parents; 
+    for (int i = 0; i < child->num_parents; i++)
+	{
+	    if (child->parents[i] == v) {index = i; break;}
+	}
+
+    
+    for (; index < child->num_parents; index++)
+	{
+	    child->parents[index] = child->parents[index+1];
+	}
+	
+    child->num_parents--;
+}
+
+
+int is_child(vertex *v, vertex *child)  // Returns 1 if has edge v --> child
+{
+    for (int i = 0; i < v->num_children; i++)
+	{
+	    if (v->children[i] == child)  { return 1;}
+	}
+    return 0;
+}
+
+
 void add_child(vertex *v, vertex *child)  // Add checks,
 {
+    printf("CALLED ADD_CHILD WITH %d --> %d\n", v->id, child->id);
     v->children[v->num_children++] = child;
-    child->parents[child->num_parents ++] = v;
+    child->parents[child->num_parents++] = v;
 }
-
-void delete_child(vertex *v, vertex *child)
-{
-    v->children[v->num_children--] = 0;   // IS THIS SAFE?
-    child->parents[child->num_parents--] = 0;
-}
-
-
-double score_if_add_parent(DAG *G, vertex *v, vertex *parent)
-{
-    double score;
-    add_child(parent, v);
-    score = BIC_score(v);
-    delete_child(parent, v);
-    return score
-}
-
-
-DAG *init_graph(matrix *data)  // Each row of data are observations for a feature. 
-{
-    int num_nodes = data->dims[0];
-    DAG *G = malloc(sizeof(*G));
-    G->nodes = malloc(num_nodes*sizeof(vertex));
-    G->num_nodes = num_nodes;
-    for (int i = 0; i < num_nodes; i++)
-	{
-	    G->nodes[i].id = i;
-
-	    G->nodes[i].num_parents = 0;
-	    G->nodes[i].parents = calloc(num_nodes, sizeof(vertex*));
-	    
-	    G->nodes[i].num_children = 0;
-	    G->nodes[i].children = calloc(num_nodes, sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT.
-
-	    G->nodes[i]->data = data[i];
-	    G->nodes[i]->num_samples = data->dims[1];
-		
-	}
-    return G;
-}
-
 
 
 int check_list(vertex current_node, int *checked_vertices) // returns 1 if current node is in node list.
@@ -140,6 +146,29 @@ int check_cyclic(DAG *G)  // This is slighly broken; it assumes every node has o
     return C;  // Returns 1 if G is cyclic.
 }
 
+int check_if_path(vertex *start, vertex *current, vertex *end)  // Returns 1 if there is a path from v1 to v2
+{
+    if (end == current)
+	{
+	    return 1;
+	}
+    
+    else
+	{
+	    for (int i = 0; i < current->num_children; i++)
+		{
+		    if (check_if_path(start, current->children[i], end))
+			{
+			    return 1;
+			}
+		}
+	}
+    
+    return 0;
+}
+	    
+		
+
 
 void free_graph(DAG *G)
 {
@@ -198,12 +227,12 @@ void free_graph(DAG *G)
 /* } */
 
 
-int graph_test()
-{
-    DAG *G = disjoint_1cycle_graph();
-    int C = check_cyclic(G);
-    printf("\n cycle: %d", C);
+/* int graph_test() */
+/* { */
+/*     DAG *G = disjoint_1cycle_graph(); */
+/*     int C = check_cyclic(G); */
+/*     printf("\n cycle: %d", C); */
 
-    free(G);
-    return 0;
-}
+/*     free(G); */
+/*     return 0; */
+/* } */

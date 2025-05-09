@@ -12,44 +12,32 @@ double BIC_score(vertex *v)
 {
     // Let N be the number of samples and s be the variance of the residuals of vertex v given its P parents.
     // Then BIC(v) = -(N/2)*log(s) - (P+2)/2  *log(N)
-    int P = v->num_parents;
-    int N = v->num_samples;
+    /* int P = v->num_parents; */
+    /* int N = v->num_samples; */
     
-    matrix *X = malloc(sizeof(*X));
-    X->data = malloc(P * sizeof(double*));  // We don't have to transpose anything in var_of_res if we do P features x N samples 
-    X->dims = malloc(2  * sizeof(int)); 
+    /* matrix *X = malloc(sizeof(*X)); */
+    /* X->data = malloc(P * sizeof(double*));  // We don't have to transpose anything in var_of_res if we do P features x N samples */
+    /* X->dims = malloc(2  * sizeof(int)); */
     
-    X->dims[0] = P;
-    X->dims[1] = N;
-    
-    for (int i = 0; i < P; i++)  // HAVE TO COPY ARRAY BECAUSE X GETS MODIFIED, FIX LATER. ALSO HAVE TO PUT ROWS ON COLUMNS
-	{
-	    X->data[i] = malloc(N * sizeof(double));
-	    for (int j = 0; j < P; j++)
-		{
-		    X->data[i] = v->parents[i]->data;
-		}
-	}
+    /* X->dims[0] = P; */
+    /* X->dims[1] = N; */
+    /* printf("score functions.c P: \nHERE!\n = %d =", P); */
+    /* for (int i = 0; i < P; i++)  // HAVE TO COPY ARRAY BECAUSE X GETS MODIFIED, FIX LATER. ALSO HAVE TO PUT ROWS ON COLUMNS */
+    /* 	{ */
+    /* 	    X->data[i] = malloc(N * sizeof(double)); */
+    /* 	    for (int j = 0; j < P; j++) */
+    /* 		{ */
+    /* 		    X->data[i] = v->parents[i]->data; */
+    /* 		} */
+    /* 	} */
 
-    double var = variance_of_residuals(X, v->data);
-    freeMatrix(X);
+    /* double var = variance_of_residuals(X, v->data); */
+    /* freeMatrix(X); */
     
-    double score = (-N/2)*log(var) - log(N)*(P+1)/2;
-    return score;
+    /* double score = (-N/2)*log(var) - log(N)*(P+1)/2; */
+    /* printf("%f", score); */
+    /* printf("\nHERE!\n"); */
+    double r = ((double)rand()/(double)RAND_MAX);
+    /* printf("%f", r); */
+    return r ;
 }
-
-// We want to parent a node that (1) doesnt create a cycle; (2) isn't in node.parents.
-// For an undirected graph we have ~N^2 possible connections. For a directed case we have 3 values for
-// each connection (child, parents, no-connection) and so worst case we have to look through 3*N^2.
-// So let's have two loops (ideally, we'd double loop through a list of random indices)
-// for node_i:
-//    generate list of random indices to iterate through. 
-//    if check(node_i -> node_j) creates cycle continue
-//    else compare and add highest score (reverse, forward, no-connection). 
-    
-    
-    
-    
-    
-
-
