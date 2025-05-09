@@ -5,8 +5,6 @@ typedef struct vertex
     int num_parents;
     struct vertex **children;
     struct vertex **parents;
-    double * data;
-    int num_samples;
 } vertex;
 
 

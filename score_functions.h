@@ -1,1 +1,1 @@
-double BIC_score(vertex *v)
+double gaussian_BIC_score(matrix * X, Y)
