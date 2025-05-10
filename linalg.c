@@ -249,19 +249,20 @@ void printArray(double **Array, int dim0, int dim1)
 }
 
 
+		
 double variance_of_residuals(matrix *X, double *Y)
 {
     // First calculate regression coefficients using [(X.T X)^-1] X.T y
     // X X.T is symmetric so transpose of inverse(X.T X) doesnt matter
-    // Samples are row wise not column-wise. 
+    // Samples are row wise not column-wise.
+    // This is basically the MSE-error
 
     matrix * xtx = malloc(sizeof(*xtx));
-    xtx->dims = malloc(2 * sizeof(int));
-    alloc_array(xtx);
-    
+    xtx->dims = malloc(2 * sizeof(int));    
     xtx->dims[0] = X->dims[0];
     xtx->dims[1] = X->dims[0];
-
+    alloc_array(xtx);
+    
     double dot;
     for (int i = 0; i < X->dims[0]; i++)  // Gram matrix; dotting every row with eachother.
 	{
@@ -275,7 +276,7 @@ double variance_of_residuals(matrix *X, double *Y)
 			}
 		}
 	}
-    
+
     matrix *Inv = invert_matrix(xtx);
     freeMatrix(xtx);
 
@@ -321,10 +322,8 @@ double variance_of_residuals(matrix *X, double *Y)
 	}
     
     VOR /= (X->dims[1] + 1);
-    
+	
     return VOR;
 
 }
     
-	    
-		
