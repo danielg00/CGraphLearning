@@ -1,0 +1,1017 @@
+./graph.c:#include <stdio.h>
+./graph.c:#include <stdlib.h>
+./graph.c:#include <assert.h>
+./graph.c:#include <math.h>
+./graph.c:#include <string.h>
+./graph.c:
+./graph.c:#include "graph.h"
+./graph.c:#include "score_functions.h"
+./graph.c:
+./graph.c:
+./graph.c:// 2 Philosophies:
+./graph.c:// (1) A graph is a list of vertices, each vertex contains properties in relation to the others in the list.
+./graph.c:// So graph.vertex.parents makes sense.
+./graph.c:// Graph is a single object and easy to manage.
+./graph.c:
+./graph.c:// (2) A graph is a structure we impose on a list of vertices.
+./graph.c:// So, vertex.graph.parents makes sense. We can easily union and manipulate graphs with this since vertices are ultimately just
+./graph.c:// locations in memory and not able to be copied, only pointed to.
+./graph.c:
+./graph.c:DAG *unicycle_graph();
+./graph.c:DAG *nocycle_graph();
+./graph.c:DAG *disjoint_1cycle_graph();
+./graph.c:int graph_test();
+./graph.c:
+./graph.c:
+./graph.c:void delete_edge(vertex *v, vertex *child)
+./graph.c:{    
+./graph.c:    
+./graph.c:    int index = v->num_children;  // If child not in children then it just skips
+./graph.c:    for (int i = 0; i < v->num_children; i++)
+./graph.c:	{
+./graph.c:	    if (v->children[i] == child) {index = i; break;}
+./graph.c:	}
+./graph.c:    
+./graph.c:    if (index == v->num_children) { printf(" %d NOT FOUND in %d.children, exiting \n", child->id, v->id); return; }
+./graph.c:
+./graph.c:    else{
+./graph.c:	
+./graph.c:	for (; index < v->num_children; index++)
+./graph.c:	    {
+./graph.c:		v->children[index] = v->children[index+1];
+./graph.c:	    }
+./graph.c:    }
+./graph.c:    v->num_children--;
+./graph.c:
+./graph.c:    if (v->num_children < 0) {printf("Num children less than zero"); exit(1);}
+./graph.c:    
+./graph.c:    index = child->num_parents; 
+./graph.c:    for (int i = 0; i < child->num_parents; i++)
+./graph.c:	{
+./graph.c:	    if (child->parents[i] == v) {index = i; break;}
+./graph.c:	}
+./graph.c:
+./graph.c:    
+./graph.c:    for (; index < child->num_parents; index++)
+./graph.c:	{
+./graph.c:	    child->parents[index] = child->parents[index+1];
+./graph.c:	}
+./graph.c:	
+./graph.c:    child->num_parents--;
+./graph.c:
+./graph.c:    /* child->calc_score_needed -= 1; */
+./graph.c:}
+./graph.c:
+./graph.c:
+./graph.c:
+./graph.c:int is_child(vertex *v, vertex *child)  // Returns 1 if there's edge v --> child
+./graph.c:{
+./graph.c:    for (int i = 0; i < v->num_children; i++)
+./graph.c:	{
+./graph.c:	    if (v->children[i] == child)  { return 1;}
+./graph.c:	}
+./graph.c:    return 0;
+./graph.c:}
+./graph.c:
+./graph.c:
+./graph.c:int add_child(vertex *v, vertex *child)  // Add checks,
+./graph.c:{
+./graph.c:    if (check_if_path(child, child, v))
+./graph.c:	{
+./graph.c:	    printf("Cannot add edge %d --> %d", v->id, child->id);
+./graph.c:	    return 0;  // JUST DO NOTHING AND RETURN 0, IDEALLY, THIS SHOULD NOT BE GETTING CALLED ANYWAYS.
+./graph.c:	}
+./graph.c:    v->children[v->num_children++] = child;
+./graph.c:    child->parents[child->num_parents++] = v;
+./graph.c:    
+./graph.c:    /* child->calc_score_needed += 1; */
+./graph.c:    return 1;
+./graph.c:}
+./graph.c:
+./graph.c:
+./graph.c:int check_if_path(vertex *start, vertex *current, vertex *end)  // Returns 1 if there is a path from v1 to v2
+./graph.c:{
+./graph.c:    if (end == current)
+./graph.c:	{
+./graph.c:	    return 1;
+./graph.c:	}
+./graph.c:    
+./graph.c:    else
+./graph.c:	{
+./graph.c:	    for (int i = 0; i < current->num_children; i++)
+./graph.c:		{
+./graph.c:		    if (check_if_path(start, current->children[i], end))
+./graph.c:			{
+./graph.c:			    return 1;
+./graph.c:			}
+./graph.c:		}
+./graph.c:	}
+./graph.c:    
+./graph.c:    return 0;
+./graph.c:}
+./graph.c:	    
+./graph.c:
+./graph.c:void free_graph(DAG *G)
+./graph.c:{
+./graph.c:    int D = G->num_nodes;
+./graph.c:    for (int i = 0; i < D; i++)
+./graph.c:	{
+./graph.c:	    free(G->nodes[i].children);
+./graph.c:	    free(G->nodes[i].parents);
+./graph.c:
+./graph.c:	}
+./graph.c:    free(G->nodes);
+./graph.c:    free(G);
+./graph.c:}
+./graph.c:
+./graph.c:
+./graph.c:void print_graph(DAG *G)
+./graph.c:{
+./graph.c:    printf("G: \n"); 
+./graph.c:
+./graph.c:    for (int i = 0; i < G->num_nodes; i++)
+./graph.c:	{
+./graph.c:	    printf(" ( %d ) ====> (", i);
+./graph.c:	    for (int j = 0; j < G->nodes[i].num_children; j++)
+./graph.c:		{
+./graph.c:		    printf(" %d ", G->nodes[i].children[j]->id);
+./graph.c:		}
+./graph.c:	    printf(")\n"); 
+./graph.c:	}
+./graph.c:}
+./graph.h:typedef struct vertex
+./graph.h:{
+./graph.h:    int id;
+./graph.h:    int num_children;
+./graph.h:    int num_parents;
+./graph.h:    struct vertex **children;
+./graph.h:    struct vertex **parents;
+./graph.h:    double * data;
+./graph.h:    int num_samples;
+./graph.h:    
+./graph.h:    int calc_score_needed; // score needs to calculated if 1.
+./graph.h:    double score;
+./graph.h:} vertex;
+./graph.h:
+./graph.h:
+./graph.h:typedef struct {
+./graph.h:    struct vertex *nodes;
+./graph.h:    int num_nodes;
+./graph.h:} DAG;
+./graph.h:
+./graph.h:int add_child(vertex *v, vertex *child);
+./graph.h:int is_child(vertex *v1, vertex *child);
+./graph.h:void delete_edge(vertex *v, vertex *child);
+./graph.h:
+./graph.h:int check_cyclic(DAG *G);
+./graph.h:int check_node_in_cycle(vertex current_node, int *checked_vertices);
+./graph.h:int check_if_path(vertex *start, vertex *current, vertex *end);
+./graph.h:
+./graph.h:void free_graph(DAG *G);
+./graph.h:void print_graph(DAG *G);
+./graph.h:int graph_test();
+./io.c:#include <stdio.h>
+./io.c:#include <stdlib.h>
+./io.c:#include <string.h>
+./io.c:#include <math.h>
+./io.c:#include <assert.h>
+./io.c:
+./io.c:#include "linalg.h"
+./io.c:
+./io.c:
+./io.c:matrix *load_matrix_from_file(char *fname) {
+./io.c:    FILE *f = fopen(fname, "rb");
+./io.c:    
+./io.c:    matrix *A = malloc(sizeof(matrix));
+./io.c:    A->dims = malloc(2 * sizeof(int));
+./io.c:
+./io.c:    
+./io.c:    char buffer[7];
+./io.c:    /* buffer[7] = '\0'; */
+./io.c:    fread(buffer, 1, 6, f);
+./io.c:    char file_name[] = {0x93, 'N', 'l', 'M', 'P', 'Y', '\0'};  // FIX
+./io.c:    assert(memcmp(buffer, file_name, 6) && "dasdas");
+./io.c:	
+./io.c:    char dummy[2]; //FILE VERSIONS - DONT CARE
+./io.c:    fread(&dummy[0], 1, 1, f);
+./io.c:    fread(&dummy[1], 1, 1, f);
+./io.c:
+./io.c:    unsigned short int len; // HEADER LENGTH
+./io.c:    fread(&len, 2, 1, f);
+./io.c:
+./io.c:    
+./io.c:    char buffer2[200];
+./io.c:    for (int i = 0; i < 100; i++) 
+./io.c:	{
+./io.c:	fscanf(f, "%s", buffer2);
+./io.c:	if (strncmp(buffer2, "'shape':", 8) == 0)
+./io.c:	    {
+./io.c:		break;
+./io.c:	    }
+./io.c:	}
+./io.c:
+./io.c:    fgetc(f); /* HACK */
+./io.c:    fscanf(f, "(%d,%d)", &(A->dims[0]), &(A->dims[1]));
+./io.c:
+./io.c:    
+./io.c:    int offset = (floor(len/64) + 1) * 64; // MOVE POINTER TO START OF FLOAT VALUES
+./io.c:    fseek(f, offset, SEEK_SET);
+./io.c:
+./io.c:    A->data = malloc(A->dims[0]*sizeof(double *));
+./io.c:
+./io.c:    for (int i = 0; i < A->dims[0]; i++)
+./io.c:	{
+./io.c:	    A->data[i] = malloc(A->dims[1]*sizeof(double));
+./io.c:	    fread(A->data[i], sizeof(double), A->dims[1], f);
+./io.c:	}
+./io.c:
+./io.c:    assert(fgetc(f) == EOF && "EOF NOT REACHED AFTER READING MATRIX VALUES");
+./io.c:    
+./io.c:    fclose(f);
+./io.c:    return A;
+./io.c:}
+./io.h:matrix *load_matrix_from_file(char * fname);
+./io.h:    
+./linalg.c:#include <stdio.h>
+./linalg.c:#include <stdlib.h>
+./linalg.c:#include <assert.h>
+./linalg.c:#include <string.h>
+./linalg.c:#include <math.h>
+./linalg.c:
+./linalg.c:#include "linalg.h"
+./linalg.c:
+./linalg.c:extern matrix *SCRATCH;
+./linalg.c:
+./linalg.c:matrix *invert_matrix(matrix * Ad)
+./linalg.c:{
+./linalg.c:    /*
+./linalg.c:      Constructs L and U arrays from LU-decomposition and solves for the inverse
+./linalg.c:      using backward and forward substitution.
+./linalg.c:
+./linalg.c:      Arguments: square matrix A dimension N to be inverted.
+./linalg.c:      
+./linalg.c:      Creates: (1) double ** arrays L, U of same dimension N.
+./linalg.c:               (2) Inverted square matrix B of dimension N.
+./linalg.c:	       (3) int array pivots of length N.
+./linalg.c:	       (4) copy of matrix A
+./linalg.c:
+./linalg.c:      Frees:   (1) arrays L, U.
+./linalg.c:               (2) array pivots
+./linalg.c:      
+./linalg.c:      Returns: Inverted matrix B 
+./linalg.c:
+./linalg.c:      
+./linalg.c:     */
+./linalg.c:
+./linalg.c:    double **L, **U;
+./linalg.c:    /* matrix *A_copy = malloc(sizeof(*A_copy)); */
+./linalg.c:    
+./linalg.c:    int idx;
+./linalg.c:    
+./linalg.c:    matrix *A = malloc(sizeof(*A));
+./linalg.c:    A->dims = malloc(2 * sizeof(int));
+./linalg.c:    memcpy(A->dims, Ad->dims, 2 * sizeof(int));
+./linalg.c:    
+./linalg.c:    alloc_array(A);
+./linalg.c:
+./linalg.c:    arraycpy(A->data, Ad->data, Ad->dims);
+./linalg.c:
+./linalg.c:    int *pivots = LU_decomposition(A, &L, &U);
+./linalg.c:    matrix * B = malloc(sizeof(*B));
+./linalg.c:    
+./linalg.c:    B->data = malloc(A->dims[0] * sizeof(double *));
+./linalg.c:    B->dims = malloc(2 * sizeof(int));
+./linalg.c:
+./linalg.c:    /* memcpy(B->dims, A->dims, 2 * sizeof(int)); */
+./linalg.c:    B->dims[0] = A->dims[0];
+./linalg.c:    B->dims[1] = A->dims[1];
+./linalg.c:
+./linalg.c:    
+./linalg.c:    for (int i = 0; i < A->dims[0]; i++)
+./linalg.c:	{
+./linalg.c:	    B->data[i] = calloc(A->dims[0], sizeof(double));
+./linalg.c:	}
+./linalg.c:	        
+./linalg.c:    for (int i = 0; i < A->dims[0]; i++)                                      // Transpose/inverse of permutation matrix
+./linalg.c:	{
+./linalg.c:	    idx = pivots[i];
+./linalg.c:	    B->data[idx][i] = 1.;
+./linalg.c:	}
+./linalg.c:
+./linalg.c:    for (int i = 0; i < A->dims[0]; i++)                                      // Solving with each row of P.T matrix
+./linalg.c:	{
+./linalg.c:	    solve_Ax_b(L, &(B->data[i]), A->dims[0], 0);
+./linalg.c:	    solve_Ax_b(U, &(B->data[i]),  A->dims[0], 1);
+./linalg.c:	}
+./linalg.c:    
+./linalg.c:    freeArray(L, A->dims[0]);
+./linalg.c:    freeArray(U, A->dims[0]);
+./linalg.c:    
+./linalg.c:    free(pivots);
+./linalg.c:    freeMatrix(A);
+./linalg.c:    return B;  // !! B is transposed !!
+./linalg.c:}
+./linalg.c:
+./linalg.c:
+./linalg.c:
+./linalg.c:int * LU_decomposition(matrix *A, double *** ptrL, double *** ptrU)
+./linalg.c:{
+./linalg.c:    /* LU decomposition with pivoting. (see https://en.wikipedia.org/wiki/LU_decomposition)
+./linalg.c:       
+./linalg.c:       
+./linalg.c:       Function is used as way to invert a matrix. 
+./linalg.c:
+./linalg.c:       TODO:
+./linalg.c:       - Check if matrix is singular and check if it is square, make return value specify this if true.
+./linalg.c:
+./linalg.c:       Creates: (1) matrix A, a copy of matrix Ad
+./linalg.c:                (2) 
+./linalg.c:    */
+./linalg.c:
+./linalg.c:    int D = A->dims[0];
+./linalg.c:
+./linalg.c:    *ptrL = malloc(D*sizeof(double *));   
+./linalg.c:    *ptrU = malloc(D*sizeof(double *));  
+./linalg.c:    
+./linalg.c:    for (int i = 0; i < D; i++)
+./linalg.c:	{
+./linalg.c:	    (*ptrL)[i] = calloc(D, sizeof(double));                           // Learned the hard way that its safer to make them square.
+./linalg.c:	    (*ptrL)[i][i] = 1.0;	                                      // initialise lower triangular matrix with identity on diagonal.
+./linalg.c:
+./linalg.c:	    (*ptrU)[i] = calloc(D, sizeof(double));
+./linalg.c:	}
+./linalg.c:
+./linalg.c:    
+./linalg.c:    /* ======== PIVOTING ======= */
+./linalg.c:    int *pivots = malloc(D * sizeof(int));
+./linalg.c:    for (int i = 0; i < D; i++)
+./linalg.c:	{
+./linalg.c:	    pivots[i] = i;
+./linalg.c:	}
+./linalg.c:
+./linalg.c:    int j, max_val_index;
+./linalg.c:    for (int n = 0; n < D-1; n++)
+./linalg.c:	{
+./linalg.c:	    max_val_index = n;
+./linalg.c:	    double max_value = fabs(A->data[n][n]);
+./linalg.c:
+./linalg.c:	    for (int i = n; i < D; i ++) 	                              // Finding max value of column n, starting from row n.
+./linalg.c:		{
+./linalg.c:		    if (fabs(A->data[i][n]) > max_value)
+./linalg.c:			{
+./linalg.c:			    max_value = fabs(A->data[i][n]);
+./linalg.c:			    max_val_index = i;
+./linalg.c:			}
+./linalg.c:		}
+./linalg.c:	    // Swapping rows
+./linalg.c:	    double *ptrRow = A->data[max_val_index];
+./linalg.c:	    A->data[max_val_index] = A->data[n];
+./linalg.c:	    A->data[n] = ptrRow;
+./linalg.c:
+./linalg.c:	    
+./linalg.c:	    j = pivots[n];
+./linalg.c:	    pivots[n] = pivots[max_val_index];
+./linalg.c:	    pivots[max_val_index] = j;
+./linalg.c:	}
+./linalg.c:   
+./linalg.c:
+./linalg.c:    /* ====== LU decomposition - Doolittle's algorithm. ======*/
+./linalg.c:    for (int n = 0; n < D; n++)
+./linalg.c:	{
+./linalg.c:	    (*ptrU)[n][n] = A->data[n][n];
+./linalg.c:	    for (int i = n + 1; i < D; i++)
+./linalg.c:		{
+./linalg.c:		    (*ptrL)[i][n] = (1/A->data[n][n])*A->data[i][n];          // L[n+1:, n] = l
+./linalg.c:		    (*ptrU)[n][i] = A->data[n][i];                            // U[n, n+1:] = u
+./linalg.c:		}
+./linalg.c:	    // A = A - outer_product(l, u)
+./linalg.c:	    for (int i = n + 1; i < D; i++)
+./linalg.c:		{
+./linalg.c:		    for (int j = n + 1; j < D; j++)
+./linalg.c:			{
+./linalg.c:			    A->data[i][j] -= (*ptrL)[i][n]*(*ptrU)[n][j];
+./linalg.c:			}
+./linalg.c:		}
+./linalg.c:	}
+./linalg.c:
+./linalg.c:    return pivots;
+./linalg.c:}
+./linalg.c:
+./linalg.c:
+./linalg.c:
+./linalg.c:void solve_Ax_b(double **A, double **b, int D, int upper)
+./linalg.c:// Solves a system of linear equations, modidies b
+./linalg.c:{
+./linalg.c:    double sum;
+./linalg.c:    switch (upper)
+./linalg.c:	{
+./linalg.c:	case 0:  // Solve with A as a lower triangular matrix with unit diagonal.
+./linalg.c:	    for (int row = 0; row < D; row++)
+./linalg.c:		{
+./linalg.c:		    sum = 0;
+./linalg.c:		    for (int col = 0; col < row; col++)
+./linalg.c:			{
+./linalg.c:			    sum += (*b)[col]*A[row][col];
+./linalg.c:			}
+./linalg.c:		    (*b)[row] -= sum; // L has unit diag so no need to divide.
+./linalg.c:
+./linalg.c:		}
+./linalg.c:	    break;
+./linalg.c:
+./linalg.c:	case 1:  // Solve with A as an upper triangular matrix.
+./linalg.c:	    for (int row = D-1; row >= 0; row--)
+./linalg.c:		{
+./linalg.c:		    sum = 0;
+./linalg.c:		    for (int col = row + 1; col < D; col++) 
+./linalg.c:			{
+./linalg.c:			    sum += (*b)[col]*A[row][col];
+./linalg.c:			}
+./linalg.c:		    (*b)[row] = ((*b)[row] - sum)/(A[row][row]);
+./linalg.c:		}
+./linalg.c:	    break;
+./linalg.c:	}
+./linalg.c:}
+./linalg.c:
+./linalg.c:
+./linalg.c:matrix *matmul(matrix * A, matrix * B)
+./linalg.c:{
+./linalg.c:    assert(A->dims[1] == B->dims[0] && "Matrix dimensions are incompatabilble.");
+./linalg.c:
+./linalg.c:    matrix *C = malloc(sizeof(*C));
+./linalg.c:    C->dims[0] = A->dims[0]; C->dims[1] = A->dims[1];
+./linalg.c:				 
+./linalg.c:    C->data = malloc(C->dims[0]*sizeof(double *));
+./linalg.c:    for (int row = 0; row < A->dims[0]; row++)
+./linalg.c:	{
+./linalg.c:	    C->data[row] = calloc(C->dims[1], sizeof(double));
+./linalg.c:	    for (int i = 0; i < A->dims[1]; i++)
+./linalg.c:		{
+./linalg.c:		    for (int j = 0; j < B->dims[0]; j++)
+./linalg.c:			{
+./linalg.c:			    C->data[row][j] += A->data[row][i]*B->data[i][j];
+./linalg.c:			}
+./linalg.c:		}
+./linalg.c:	}
+./linalg.c:	    
+./linalg.c:    return C;
+./linalg.c:}
+./linalg.c:
+./linalg.c:void freeArray(double ** array, int dim0) // Frees each row first and then frees initial pointer array.
+./linalg.c:{
+./linalg.c:    for (int i = 0; i < dim0; i++)
+./linalg.c:	{
+./linalg.c:	    free(array[i]);
+./linalg.c:	}
+./linalg.c:    free(array);
+./linalg.c:}
+./linalg.c:
+./linalg.c:
+./linalg.c:void alloc_array(matrix *A)
+./linalg.c:{
+./linalg.c:    A->data = malloc(A->dims[0] * sizeof(double *));
+./linalg.c:    for (int i = 0; i < A->dims[0]; i++)
+./linalg.c:	{
+./linalg.c:	    A->data[i] = calloc(A->dims[1], sizeof(double));
+./linalg.c:	}
+./linalg.c:}
+./linalg.c:
+./linalg.c:
+./linalg.c:void freeMatrix(matrix *M)
+./linalg.c:{
+./linalg.c:    freeArray(M->data, M->dims[0]);
+./linalg.c:    free(M->dims);
+./linalg.c:    free(M);
+./linalg.c:}
+./linalg.c:
+./linalg.c:
+./linalg.c:void printArray(double **Array, int dim0, int dim1)
+./linalg.c:{
+./linalg.c:    printf("\n====================\n");
+./linalg.c:    for (int i = 0; i < dim0; i++)
+./linalg.c:	{
+./linalg.c:	    for (int j = 0; j < dim1; j++)
+./linalg.c:		{
+./linalg.c:		    printf(" %f ", Array[i][j]);
+./linalg.c:		}
+./linalg.c:	    printf(" \n ");
+./linalg.c:	}
+./linalg.c:    printf("\n====================\n");
+./linalg.c:
+./linalg.c:}
+./linalg.c:
+./linalg.c:void arraycpy(double **Copy, double **A, int *dims)
+./linalg.c:{
+./linalg.c:    for (int i = 0; i < dims[0]; i++)
+./linalg.c:	{
+./linalg.c:	    memcpy(Copy[i], A[i], dims[1] * sizeof(double));
+./linalg.c:	}
+./linalg.c:}
+./linalg.c:	
+./linalg.c:
+./linalg.c:
+./linalg.c:		
+./linalg.c:double variance_of_residuals(matrix *X, double *Y)
+./linalg.c:{
+./linalg.c:    // First calculate regression coefficients using [(X.T X)^-1] X.T y
+./linalg.c:    // X X.T is symmetric so transpose of inverse(X.T X) doesnt matter
+./linalg.c:    // Samples are row wise not column-wise.
+./linalg.c:    // This is basically the MSE-error
+./linalg.c:
+./linalg.c:    matrix * xtx = malloc(sizeof(*xtx));
+./linalg.c:    xtx->dims = malloc(2 * sizeof(int));    
+./linalg.c:    xtx->dims[0] = X->dims[0];
+./linalg.c:    xtx->dims[1] = X->dims[0];
+./linalg.c:    alloc_array(xtx);
+./linalg.c:    
+./linalg.c:    double dot;
+./linalg.c:    for (int i = 0; i < X->dims[0]; i++)  // Gram matrix; dotting every row with eachother.
+./linalg.c:	{
+./linalg.c:	    dot = 0;
+./linalg.c:	    for (int j = i; j < X->dims[0]; j++)
+./linalg.c:		{
+./linalg.c:		    for (int k = 0; k < X->dims[1]; k++)
+./linalg.c:			{
+./linalg.c:			    xtx->data[i][j] += X->data[i][k]*X->data[j][k];
+./linalg.c:			    xtx->data[j][i] += X->data[i][k]*X->data[j][k];
+./linalg.c:			}
+./linalg.c:		}
+./linalg.c:	}
+./linalg.c:
+./linalg.c:    matrix *Inv = invert_matrix(xtx);
+./linalg.c:    freeMatrix(xtx);
+./linalg.c:
+./linalg.c:    matrix *C = matmul(Inv, X);
+./linalg.c:    freeMatrix(Inv);
+./linalg.c:    
+./linalg.c:    double betas[X->dims[0]];  // Slopes
+./linalg.c:    for (int i = 0; i < X->dims[0]; i++)
+./linalg.c:	{
+./linalg.c:	    dot = 0;
+./linalg.c:	    for (int j = 0; j < X->dims[1]; j++)
+./linalg.c:		{
+./linalg.c:		    dot += Y[j]*C->data[i][j];
+./linalg.c:		}
+./linalg.c:	    betas[i] = dot;
+./linalg.c:	}
+./linalg.c:    
+./linalg.c:    // Calculating intercept. / mean of Y  - sample mean of each feature times its slope
+./linalg.c:    double mu_Y = 0;
+./linalg.c:    for (int i = 0; i < X->dims[1]; i++) {mu_Y += Y[i]; }
+./linalg.c:    mu_Y /= X->dims[1];
+./linalg.c:
+./linalg.c:    double mu_XB = 0;
+./linalg.c:    for (int i = 0; i < X->dims[0]; i++)
+./linalg.c:	{
+./linalg.c:	    for (int j = 0; j < X->dims[1]; j++)
+./linalg.c:		{
+./linalg.c:		    mu_XB += X->data[i][j];  // Sum of samples of feature j.
+./linalg.c:		}
+./linalg.c:	    mu_XB *= betas[i]/X->dims[1];
+./linalg.c:	}
+./linalg.c:    double intercept = mu_Y - mu_XB;
+./linalg.c:
+./linalg.c:    // Calculate the variance of residuals.
+./linalg.c:    double VOR;
+./linalg.c:    VOR = 0;
+./linalg.c:    for (int i = 0; i < X->dims[1]; i++)
+./linalg.c:	{
+./linalg.c:	    dot = 0;
+./linalg.c:	    for (int j = 0; j < X->dims[0]; j++)
+./linalg.c:		{
+./linalg.c:		    dot += (X->data[j][i] * betas[j]) + intercept;
+./linalg.c:		}
+./linalg.c:	    VOR += (Y[i] - dot)*(Y[i] - dot);
+./linalg.c:	}
+./linalg.c:    
+./linalg.c:    VOR /= (X->dims[1] + 1);
+./linalg.c:	
+./linalg.c:    return VOR;
+./linalg.c:
+./linalg.c:}
+./linalg.c:    
+./linalg.h:typedef struct {
+./linalg.h:    int * dims;
+./linalg.h:    double ** data;    
+./linalg.h:} matrix;
+./linalg.h:
+./linalg.h:
+./linalg.h:matrix *matmul(matrix * A, matrix * B);
+./linalg.h:int * LU_decomposition(matrix * A, double *** L, double *** U);
+./linalg.h:matrix * invert_matrix(matrix * A);
+./linalg.h:void solve_Ax_b(double **A, double **b, int D, int upper);
+./linalg.h:
+./linalg.h:double variance_of_residuals(matrix *X, double *Y);
+./linalg.h:
+./linalg.h:void printArray(double **Array, int dim0, int dim1);
+./linalg.h:void alloc_array(matrix *A);
+./linalg.h:
+./linalg.h:void freeArray(double ** array, int N);
+./linalg.h:void freeMatrix(matrix *M);
+./linalg.h:void arraycpy(double **A, double **Copy, int *dims);
+Binary file ./main matches
+./main.c:#include <stdio.h>
+./main.c:#include <stdlib.h>
+./main.c:#include <string.h>
+./main.c:#include <math.h>
+./main.c:#include <assert.h>
+./main.c:#include <time.h>
+./main.c:
+./main.c:
+./main.c:#include "linalg.h"
+./main.c:#include "io.h"
+./main.c:#include "graph.h"
+./main.c:#include "score_functions.h"
+./main.c:
+./main.c:#define ITERS 10
+./main.c:
+./main.c:matrix *SCRATCH = NULL;
+./main.c:
+./main.c:DAG *init_graph(matrix *data);
+./main.c:int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *));
+./main.c:int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFunc)(vertex *), double *max_score_diff);
+./main.c:
+./main.c:// SEEMS MOST IS OK, CURRENT BUG IS THAT I CANT CALL BIC_SCORE MORE THAN ONCE.
+./main.c:// THINK IT HAS SOMETHING TO DO WITH COPYING MATRIX DURING INVERSION, SINCE INVERSION USED TO WORK FIND,
+./main.c:// ALTHOUGH WHEN TESTING I ONLY CALLED THE FUNCTION ONCE.
+./main.c:
+./main.c:// ANOTHER ONE IS THAT DELETE EDGE STILL GETTING CALLED FOR NON EXISTENT EDGES
+./main.c:
+./main.c:// TODO FIGURE OUT COPY ARRAY PART, MOST LIKELY VAR_OF_RES MOST LIKELY NEEDS complete rework.
+./main.c:
+./main.c:int main2()
+./main.c:{
+./main.c:    char * fname = "test_data/test_d.npy";
+./main.c:    
+./main.c:    matrix *A = load_matrix_from_file(fname);  // features x samples
+./main.c:    
+./main.c:    DAG *G = init_graph(A);
+./main.c:
+./main.c:    add_child(&(G->nodes[0]), &(G->nodes[1]));
+./main.c:    add_child(&(G->nodes[2]), &(G->nodes[1]));
+./main.c:    add_child(&(G->nodes[3]), &(G->nodes[1]));
+./main.c:    double var = BIC_score(&(G->nodes[1]));
+./main.c:
+./main.c:    printf(" %f ", var);
+./main.c:    return 0;
+./main.c:}
+./main.c:
+./main.c:
+./main.c:
+./main.c:int main()
+./main.c:{
+./main.c:    char * fname = "test_data/test_d.npy";
+./main.c:    
+./main.c:    matrix *A = load_matrix_from_file(fname);  // features x samples
+./main.c:    
+./main.c:    DAG *G = init_graph(A);
+./main.c:    
+./main.c:    int opt[3];  // opt = {v1, v2, mod_type}
+./main.c:    int mod;
+./main.c:    int i = 0;
+./main.c:    
+./main.c:    srand(time(NULL));
+./main.c:    
+./main.c:    while (i < 10)
+./main.c:	{
+./main.c:	    printf("\n ############## EPOCH %d ##############\n", i);
+./main.c:	    
+./main.c:	    mod = find_best_mod(G, opt, &BIC_score);
+./main.c:	    printf(" (%d, %d, %d) ", opt[0], opt[1], opt[2]);
+./main.c:	    if (mod == 0)
+./main.c:		{
+./main.c:		    printf("CONVERGED");
+./main.c:		    return 0;
+./main.c:		}
+./main.c:	    
+./main.c:	    // Applying the best option
+./main.c:	    if (opt[2] == 0) // Apply edge deletion
+./main.c:		{
+./main.c:		    delete_edge(&(G->nodes[opt[0]]), &(G->nodes[opt[1]]));
+./main.c:		    printf("With score of %f\n", BIC_score( &(G->nodes[opt[0]]) ) + BIC_score( &(G->nodes[opt[1]]) ) );
+./main.c:		}
+./main.c:	    
+./main.c:	    else
+./main.c:		{
+./main.c:		    add_child(&(G->nodes[opt[0]]), &(G->nodes[opt[1]]));		    
+./main.c:		    printf("Total mods: %d, Best is add edge ( %d ) --> ( %d ) ", mod, opt[0], opt[1]);
+./main.c:		    printf("With score of %f\n", BIC_score( &(G->nodes[opt[0]]) ) + BIC_score( &(G->nodes[opt[1]]) ) );
+./main.c:		}
+./main.c:	    
+./main.c:	    print_graph(G);
+./main.c:
+./main.c:	    i++;
+./main.c:	}
+./main.c:    
+./main.c:    print_graph(G);
+./main.c:    freeMatrix(A);	
+./main.c:    return 0;
+./main.c:}
+./main.c:
+./main.c:
+./main.c:
+./main.c:int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Returns 0 if no best mod was found
+./main.c:{
+./main.c:    
+./main.c:
+./main.c:    // We're basically looking through all possible connections of G,
+./main.c:    // making all possible modifications of an edge, computing the best score, and then
+./main.c:    // undoing it.
+./main.c:    //
+./main.c:    // Since scoreFunc is decomposable along the vertices, we just need to compute
+./main.c:    // the score of unmodified vertices, and see if the modification increase it.
+./main.c:    // The largest increase in local score between any two vertices are the vertices
+./main.c:    // chosen with the corresponding modification.
+./main.c:    // We want to avoid checking for cycles, calling is_child, and calling scoreFunc
+./main.c:    // too much because these are relatively expensive.
+./main.c:
+./main.c:    //
+./main.c:    // Modifies options to specify information for the best modification type:
+./main.c:    //    options = {index1, index2, mod_type}
+./main.c:    //    Where index1 index2 are the indices specifying vertices v1, v2, whose edge is to be modified.
+./main.c:    //    And where mod_type == 1: if v1 --> v2 is best option.
+./main.c:    //              mod_type == 0: if v1 v2 is to have no connecting edge.
+./main.c:
+./main.c:    
+./main.c:    double max_score_diff = 0.;  // The modification with the largest value score_diff is the 'chosen one'.
+./main.c:    int num_mods = 0.; // Number of possible modifications. If this is zero, then no better mod was found.
+./main.c:
+./main.c:    for (int i = 0; i < G->num_nodes-1; i++)
+./main.c:	{
+./main.c:	    for (int j = i+1; j < G->num_nodes; j++)
+./main.c:		{
+./main.c:		    vertex *v1 = &(G->nodes[i]); vertex *v2 = &(G->nodes[j]);
+./main.c:		    // Two vertices can either be connected or not-connected,
+./main.c:		    // Calling is_child is O(n) so we want to avoid constantly doing that.
+./main.c:		    // We also want to skip over cases that cause cycles.
+./main.c:		    
+./main.c:		    if (is_child(v1, v2))
+./main.c:			{
+./main.c:			    num_mods += best_mod_if_connected(v1, v2, option, scoreFunc, &max_score_diff); 
+./main.c:			}
+./main.c:
+./main.c:		    
+./main.c:		    else if(is_child(v2, v1))
+./main.c:			{
+./main.c:			    num_mods +=  best_mod_if_connected(v2, v1, option, scoreFunc, &max_score_diff);
+./main.c:			}
+./main.c:
+./main.c:
+./main.c:		    // No edge between v1 and v2;
+./main.c:		    else  
+./main.c:			{
+./main.c:			    double old_score;
+./main.c:			    double diff_for_12 = max_score_diff;
+./main.c:			    double diff_for_21 = max_score_diff;
+./main.c:			    
+./main.c:			    old_score = (*scoreFunc)(v1) + (*scoreFunc)(v2);
+./main.c:
+./main.c:			    if(!check_if_path(v1, v1, v2))
+./main.c:				{
+./main.c:				    add_child(v2, v1);
+./main.c:				    diff_for_12 = (*scoreFunc)(v1) + (*scoreFunc)(v2) - old_score;
+./main.c:				    delete_edge(v2, v1);    
+./main.c:				}
+./main.c:
+./main.c:			    if(!check_if_path(v2, v2, v1))
+./main.c:				{
+./main.c:				    add_child(v1, v2);
+./main.c:				    diff_for_21 = (*scoreFunc)(v1) + (*scoreFunc)(v2) - old_score;
+./main.c:				    delete_edge(v1, v2);
+./main.c:				}
+./main.c:			    
+./main.c:			    else  { continue; }  // Adding an edge either way causes a cycle so continue.
+./main.c:			    
+./main.c:
+./main.c:			    if (diff_for_12 <= max_score_diff && diff_for_21 <= max_score_diff)  // Neither changes are better.
+./main.c:				{
+./main.c:				    continue;
+./main.c:				}
+./main.c:			    else if (diff_for_12 > max_score_diff)  {  // v2 --> v1 is best choice.
+./main.c:				num_mods += 1; 
+./main.c:				option[0] = i; option[1] = j; option[2] = 1;
+./main.c:				max_score_diff = diff_for_12;
+./main.c:			    }
+./main.c:
+./main.c:			    else {  // v1 --> v2 is best choice.
+./main.c:				num_mods += 1;
+./main.c:				option[0] = j; option[1] = i; option[2] = 1;
+./main.c:				max_score_diff = diff_for_21;
+./main.c:			    }
+./main.c:			    
+./main.c:			}
+./main.c:		}
+./main.c:	}
+./main.c:
+./main.c:    return num_mods;
+./main.c:}
+./main.c:
+./main.c:
+./main.c:int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFunc)(vertex *), double *max_score_diff)
+./main.c:{
+./main.c:    // Takes two vertices, and tries to find a config that is better than current max_score_diff.
+./main.c:    // The local score is the change that increases the score the most.
+./main.c:    // If the local change increase the score than max_score_diff, then tentatively that change is adopted.
+./main.c:    // Otherwise, we continue onto next vertex pair.
+./main.c:    
+./main.c:    // Returns 0 if no better config was found.
+./main.c:
+./main.c:    double diff_for_delete, diff_for_reverse;
+./main.c:
+./main.c:    double old_score = (*scoreFunc)(v1) + (*scoreFunc)(v2);
+./main.c:	
+./main.c:    delete_edge(v1, v2);
+./main.c:    diff_for_delete = (*scoreFunc)(v2) + (*scoreFunc)(v1) - old_score;
+./main.c:    
+./main.c:    // If a path between v1 and v2 exists after deleting, then reversing the edge causes a  cycle.
+./main.c:    
+./main.c:    if (!check_if_path(v1 ,v1, v2)) // If there's no path, we can proceed to check score for reversed.
+./main.c:	{	    
+./main.c:	    add_child(v2, v1);
+./main.c:	    diff_for_reverse = (*scoreFunc)(v2) + (*scoreFunc)(v1) - old_score;
+./main.c:	    
+./main.c:	    if (diff_for_reverse < *max_score_diff && diff_for_delete < *max_score_diff)  // Doing nothing was best option.
+./main.c:		{
+./main.c:		    delete_edge(v2, v1); add_child(v1, v2);
+./main.c:		    return 0;
+./main.c:		}
+./main.c:	    
+./main.c:	    else if (diff_for_delete <= diff_for_reverse )  // Reversing the edge was best option.
+./main.c:		{
+./main.c:		    *max_score_diff =diff_for_reverse;
+./main.c:		    option[0] = v2->id; option[1] = v1->id; option[2] = 1;
+./main.c:		    
+./main.c:		    delete_edge(v2, v1); add_child(v1, v2);
+./main.c:		    return 1;
+./main.c:		}
+./main.c:	    
+./main.c:	    else // deleting the edge was best option.
+./main.c:		{
+./main.c:		    *max_score_diff = diff_for_delete;
+./main.c:		    option[0] = v1->id; option[1] = v2->id; option[2] = 0;
+./main.c:		    add_child(v1, v2);
+./main.c:		    return 1;
+./main.c:		}
+./main.c:	}
+./main.c:    
+./main.c:    
+./main.c:    else  // Reversing the edge isn't an option, so we just compare with delete edge.
+./main.c:	{
+./main.c:	    add_child(v1, v2);
+./main.c:		
+./main.c:		if (diff_for_delete > *max_score_diff)
+./main.c:		    {
+./main.c:			*max_score_diff = diff_for_delete;
+./main.c:			option[0] = v1->id; option[1] = v2->id; option[2] = 0;
+./main.c:			return 1;
+./main.c:		    }
+./main.c:	    
+./main.c:		else  
+./main.c:		    {
+./main.c:			return 0;
+./main.c:		    }
+./main.c:	}
+./main.c:    
+./main.c:    return 0;
+./main.c:}
+./main.c:
+./main.c:
+./main.c:
+./main.c:
+./main.c:DAG *init_graph(matrix *data)  // Each row of data are observations for a feature. 
+./main.c:{
+./main.c:    int num_nodes = data->dims[0];
+./main.c:    DAG *G = malloc(sizeof(*G));
+./main.c:    G->nodes = malloc(num_nodes*sizeof(vertex));
+./main.c:    G->num_nodes = num_nodes;
+./main.c:    for (int i = 0; i < num_nodes; i++)
+./main.c:	{
+./main.c:	    G->nodes[i].id = i;
+./main.c:
+./main.c:	    G->nodes[i].num_parents = 0;
+./main.c:	    G->nodes[i].parents = calloc(num_nodes, sizeof(vertex*));
+./main.c:	    
+./main.c:	    G->nodes[i].num_children = 0;
+./main.c:	    G->nodes[i].children = calloc(num_nodes, sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT.
+./main.c:
+./main.c:	    G->nodes[i].data = data->data[i];
+./main.c:	    G->nodes[i].num_samples = data->dims[1];
+./main.c:
+./main.c:	    G->nodes[i].calc_score_needed = 1;
+./main.c:		
+./main.c:	}
+./main.c:    return G;
+./main.c:}
+./main.c:
+./main.c:
+./Makefile:main: main.c
+./Makefile:	gcc -g -Wno-unused-result -O0 -Wall main.c linalg.c io.c graph.c score_functions.c -lm -o main
+./Makefile:	./main
+./prototyping.py:import numpy as np
+./prototyping.py:
+./prototyping.py:X = np.load("test_data/test_d.npy") # columns are features, rows are observations.
+./prototyping.py:
+./prototyping.py:G = np.zeros(X.shape[1], X.shape[1])
+./prototyping.py:
+./prototyping.py:def score_graph(G):
+./prototyping.py:    
+./README.md:This is rudimentary implementation of a structure learning algorithm for directed graphical models in C. 
+./README.md:
+./README.md:Our goal is given a dataset, we want to learn an underlying directed graph, where vertices represent random variables and arrows represent conditional dependencies.
+./README.md:The most simplest algorithm is a hill climbing algorithm. We start with a graph with no vertices; for each pair of vertices we use a score function to determine if drawing an arrow from one 
+./README.md:to the other increases our likelihood function - that is the probability that we would observe our data given the current model. If it improves the model, we add the arrow, and continue on to the next until 
+./README.md:convergence or some other suitable stopping criteria. 
+./README.md:
+./README.md:An imporn
+./score_functions.c:#include <stdio.h>
+./score_functions.c:#include <stdlib.h>
+./score_functions.c:#include <string.h>
+./score_functions.c:#include <math.h>
+./score_functions.c:#include <assert.h>
+./score_functions.c:#include <time.h>
+./score_functions.c:
+./score_functions.c:#include "linalg.h"
+./score_functions.c:#include "graph.h"
+./score_functions.c:#include "score_functions.h"
+./score_functions.c:
+./score_functions.c:double BIC_score(vertex *v)
+./score_functions.c:{
+./score_functions.c:    // Let N be the number of samples and s be the variance of the residuals of vertex v given its P parents.
+./score_functions.c:    // Then BIC(v) = -(N/2)*log(s) - (P+2)/2  *log(N)
+./score_functions.c:    int P = v->num_parents;
+./score_functions.c:    int N = v->num_samples;
+./score_functions.c:
+./score_functions.c:    /* if (!(v->score_changed)) */
+./score_functions.c:    /* 	{ */
+./score_functions.c:    /* 	    return v->score; */
+./score_functions.c:    /* 	}     */
+./score_functions.c:    
+./score_functions.c:    if (P == 0)
+./score_functions.c:	{
+./score_functions.c:	    return log(N);
+./score_functions.c:	}
+./score_functions.c:   
+./score_functions.c:    matrix *X = malloc(sizeof(*X));
+./score_functions.c:    X->dims = malloc(2  * sizeof(int));
+./score_functions.c:    X->dims[0] = P;
+./score_functions.c:    X->dims[1] = N;
+./score_functions.c:
+./score_functions.c:    X->data = malloc(2 * sizeof(double*));
+./score_functions.c:
+./score_functions.c:    printf("\n HERE %d \n", P);
+./score_functions.c:
+./score_functions.c:    for (int i = 0; i < P; i++)  /* HAVE TO COPY ARRAY BECAUSE X GETS MODIFIED DURING LU DECOMP, FIX LATER. ALSO HAVE TO PUT ROWS ON COLUMNS */
+./score_functions.c:	{
+./score_functions.c:	    X->data[i] = malloc(N * sizeof(double));
+./score_functions.c:	    X->data[i] = v->parents[i]->data;
+./score_functions.c:	}
+./score_functions.c:
+./score_functions.c:
+./score_functions.c:    double var = variance_of_residuals(X, v->data);
+./score_functions.c:    
+./score_functions.c:    freeMatrix(X);
+./score_functions.c:    
+./score_functions.c:    double score = (-N/2)*log(var) - log(N)*(P+1)/2;
+./score_functions.c:
+./score_functions.c:    return (double)(rand()%100);
+./score_functions.c:}
+./score_functions.c:
+./score_functions.c:
+./score_functions.c:
+./score_functions.h:double BIC_score(vertex *v);
+./TODO.md:## Structure of Main
+./TODO.md:	data = load_array(File)
+./TODO.md:	G = init_graph(data)
+./TODO.md:      while True
+./TODO.md:          n1, n2 = choose({Nodes})
+./TODO.md:	  if check_cyclic(n1 -> n2) == False
+./TODO.md:	      s1 = score(G(n1).add_parents(n2))
+./TODO.md:	  if check_cyclic(n2 -> n1) == False
+./TODO.md:	      s2 = score(G(n).add_parents(n1))
+./TODO.md:	  else:
+./TODO.md:	      next
+./TODO.md:	  if s1 > s2:
+./TODO.md:	      G(n1).add_parents(n2)
+./TODO.md:	  else:
+./TODO.md:	      G(n2).add_parents(n1)
+./TODO.md:
+./TODO.md:	TODO:
+./TODO.md:	   Implement linked graph structure  [DONE]
+./TODO.md:	   Implement check_cycle  [DONE]
+./TODO.md:	   Implemenet add_children   [DONE]
+./TODO.md:	   
+./TODO.md:	   Implement BIC_Score (implement linear regression and calc the variance of residuals)
+./TODO.md:	   Implement delete child/parent function
+./TODO.md:	   Fix check cycle function.
+./TODO.md:	   Find memory leak in graph.c
+./TODO.md:	
+./TODO.md:	
+./TODO.md:## other TODO
+./TODO.md:* Clean up and comment linalg section
+./TODO.md:* implement score function for gaussians: Compute linear regression and then get variance of residuals.
+./TODO.md:* implement directed acyclic graph structure
+./TODO.md:* If i can implement something like a matrix class that stores data contingously, and make index function.
+./TODO.md:			
+./TODO.md:	
+./TODO.md:	
+./TODO.md:	
+./TODO.md:	

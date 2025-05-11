@@ -24,9 +24,7 @@ int graph_test();
 
 
 void delete_edge(vertex *v, vertex *child)
-{
-    /* printf("DELETING %d --> %d\n", v->id, child->id); */
-    
+{    
     
     int index = v->num_children;  // If child not in children then it just skips
     for (int i = 0; i < v->num_children; i++)
@@ -45,7 +43,7 @@ void delete_edge(vertex *v, vertex *child)
     }
     v->num_children--;
 
-    if (v->num_children < 0) {fprintf(stderr, "Num children less than zero"); exit(1);}
+    if (v->num_children < 0) {printf("Num children less than zero"); exit(1);}
     
     index = child->num_parents; 
     for (int i = 0; i < child->num_parents; i++)
@@ -60,11 +58,13 @@ void delete_edge(vertex *v, vertex *child)
 	}
 	
     child->num_parents--;
+
+    /* child->calc_score_needed -= 1; */
 }
 
 
 
-int is_child(vertex *v, vertex *child)  // Returns 1 if has edge v --> child
+int is_child(vertex *v, vertex *child)  // Returns 1 if there's edge v --> child
 {
     for (int i = 0; i < v->num_children; i++)
 	{
@@ -76,16 +76,15 @@ int is_child(vertex *v, vertex *child)  // Returns 1 if has edge v --> child
 
 int add_child(vertex *v, vertex *child)  // Add checks,
 {
-    /* printf("CALLED ADD_CHILD WITH %d --> %d\n", v->id, child->id); */
-
     if (check_if_path(child, child, v))
 	{
-	    /* printf("ADD_CHILD WITH %d --> %d CREATES CYCLE, IGNORING \n", v->id, child->id); */
-	    
-	    return 0;  // JUST DO NOTHING AND RETURN 0
+	    printf("Cannot add edge %d --> %d", v->id, child->id);
+	    return 0;  // JUST DO NOTHING AND RETURN 0, IDEALLY, THIS SHOULD NOT BE GETTING CALLED ANYWAYS.
 	}
     v->children[v->num_children++] = child;
     child->parents[child->num_parents++] = v;
+    
+    /* child->calc_score_needed += 1; */
     return 1;
 }
 
@@ -109,32 +108,4 @@ int check_if_path(vertex *start, vertex *current, vertex *end)  // Returns 1 if 
 	}
     
     return 0;
-}
-	    
-
-void free_graph(DAG *G)
-{
-    int D = G->num_nodes;
-    for (int i = 0; i < D; i++)
-	{
-	    free(G->nodes[i].children);
-	    free(G->nodes[i].parents);
-
-	}
-    free(G->nodes);
-    free(G);
-}
-
-
-void print_graph(DAG *G)
-{
-    for (int i = 0; i < G->num_nodes; i++)
-	{
-	    printf(" ( %d ) ====> (", i);
-	    for (int j = 0; j < G->nodes[i].num_children; j++)
-		{
-		    printf(" %d ", G->nodes[i].children[j]->id);
-		}
-	    printf(")\n"); 
-	}
 }

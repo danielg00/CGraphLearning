@@ -7,6 +7,9 @@ typedef struct vertex
     struct vertex **parents;
     double * data;
     int num_samples;
+    
+    int calc_score_needed; // score needs to calculated if 1.
+    double score;
 } vertex;
 
 

@@ -16,3 +16,4 @@ void alloc_array(matrix *A);
 
 void freeArray(double ** array, int N);
 void freeMatrix(matrix *M);
+void arraycpy(double **A, double **Copy, int *dims);
