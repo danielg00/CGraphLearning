@@ -190,19 +190,21 @@ double variance_of_residuals(matrix *X, double *Y)
     // X X.T is symmetric so transpose of inverse(X.T X) doesnt matter
     // Samples are row wise not column-wise.
     // This is basically the MSE-error
+    //
+    // The expression X^tX requires us to dot product each column (a feature of size P) with every other column giving an P x P matrix.
+    // We have passed X in the form of P x N instead of N x P, so we instead want to do every row with everyother row.
 
     matrix *Inv, *xtx, *C;
 
-    printf(" ASDASDAS " );
     xtx = malloc(sizeof(*xtx));
     xtx->dims = malloc(2 * sizeof(int));
-    xtx->dims[0] = X->dims[0]; xtx->dims[1] = X->dims[0];
-	
+    xtx->dims[0] = X->dims[0];  // Setting square matrix of dimension P.
+    xtx->dims[1] = X->dims[0];
+    
     alloc_array(xtx);
 
-    
     double dot;
-    for (int i = 0; i < X->dims[0]; i++)  // Gram matrix; dotting every row with eachother.
+    for (int i = 0; i < X->dims[0]; i++) 
 	{
 	    for (int j = i; j < X->dims[0]; j++)
 		{
@@ -214,19 +216,13 @@ double variance_of_residuals(matrix *X, double *Y)
 			}
 		}
 	}
-
-    printf(" \n BEFORE INVERT MAT \n");
     
     Inv = invert_matrix(xtx);
-    printf("( %d, %d )\n", Inv->dims[0], Inv->dims[1]);
-    freeMatrix(xtx);
-
     C = matmul(Inv, X);
-    
-    freeMatrix(Inv);
-
+	
     
     double betas[X->dims[0]];  // Slopes
+    
     for (int i = 0; i < X->dims[0]; i++)
 	{
 	    dot = 0;
@@ -236,6 +232,8 @@ double variance_of_residuals(matrix *X, double *Y)
 		}
 	    betas[i] = dot;
 	}
+
+    /* for (int i = 0; i < X->dims[0]; i++) {printf(" BETA:");printf(" %f ", betas[i]);} */
     
     // Calculating intercept. / mean of Y  - sample mean of each feature times its slope
     double mu_Y = 0;
@@ -251,11 +249,13 @@ double variance_of_residuals(matrix *X, double *Y)
 		}
 	    mu_XB *= betas[i]/X->dims[1];
 	}
+
     double intercept = mu_Y - mu_XB;
 
     // Calculate the variance of residuals.
     double VOR;
     VOR = 0;
+
     for (int i = 0; i < X->dims[1]; i++)
 	{
 	    dot = 0;
@@ -267,7 +267,11 @@ double variance_of_residuals(matrix *X, double *Y)
 	}
     
     VOR /= (X->dims[1] + 1);
-	
+
+    freeMatrix(Inv);
+    freeMatrix(xtx);
+    freeMatrix(C);
+    
     return VOR;
 
 }

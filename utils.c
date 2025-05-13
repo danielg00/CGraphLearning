@@ -14,25 +14,37 @@
 matrix *matmul(matrix * A, matrix * B)
 {
     assert(A->dims[1] == B->dims[0] && "Matrix dimensions are incompatabilble.");
-
+    
     matrix *C = malloc(sizeof(*C));
-    C->dims[0] = A->dims[0]; C->dims[1] = A->dims[1];
-				 
-    C->data = malloc(C->dims[0]*sizeof(double *));
-    for (int row = 0; row < A->dims[0]; row++)
+    C->dims = malloc(2 * sizeof(int));
+    C->dims[0] = A->dims[0]; C->dims[1] = B->dims[1];
+
+    C->data = malloc(C->dims[0] * sizeof(double *));
+    for (int i = 0; i < A->dims[0]; i++)
 	{
-	    C->data[row] = calloc(C->dims[1], sizeof(double));
-	    for (int i = 0; i < A->dims[1]; i++)
+	    C->data[i] = calloc(C->dims[1], sizeof(double));
+	    
+	    for (int j = 0; j < B->dims[0]; j++)
 		{
-		    for (int j = 0; j < B->dims[0]; j++)
+		    for (int k = 0; k < B->dims[1]; k++)
 			{
-			    C->data[row][j] += A->data[row][i]*B->data[i][j];
+			    C->data[i][k] += A->data[i][j]*B->data[j][k];
 			}
 		}
 	}
-	    
     return C;
 }
+
+    
+void alloc_array(matrix *A)
+{
+    A->data = malloc(A->dims[0] * sizeof(double *));
+    for (int i = 0; i < A->dims[0]; i++)
+	{
+	    A->data[i] = calloc(A->dims[1], sizeof(double));
+	}
+}
+
 
 void freeArray(double ** array, int dim0) // Frees each row first and then frees initial pointer array.
 {
@@ -41,17 +53,6 @@ void freeArray(double ** array, int dim0) // Frees each row first and then frees
 	    free(array[i]);
 	}
     free(array);
-}
-
-
-void alloc_array(matrix *A)
-{
-    printf("\n ptr = %d = \n", A->dims[0]);
-    A->data = malloc(A->dims[0] * sizeof(double *));
-    for (int i = 0; i < A->dims[0]; i++)
-	{
-	    A->data[i] = calloc(A->dims[1], sizeof(double));
-	}
 }
 
 
@@ -77,6 +78,7 @@ void printArray(double **Array, int dim0, int dim1)
     printf("\n====================\n");
 
 }
+
 
 void arraycpy(double **Copy, double **A, int *dims)
 {

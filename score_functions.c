@@ -25,34 +25,46 @@ double BIC_score(vertex *v)
 	{
 	    return log(N);
 	}
-    
+
     matrix *X = malloc(sizeof(*X));
     X->dims = malloc(2  * sizeof(int));
     X->dims[0] = P;
     X->dims[1] = N;
     
-    X->data = calloc(P, sizeof(double*));
-
-    printf("\n HERE2 %d\n ");
+    X->data = malloc(P * sizeof(double*));
 	
     for (int i = 0; i < P; i++)
 	{
-	    X->data[i] = v->parents[i]->data;
+	    X->data[i] = v->parents[i]->data; // This simply points to the original data, we don't want to modify what it points to. 
 	}
     
     double var = variance_of_residuals(X, v->data);
     
-    free(X->dims);
     free(X->data);
-    X->data = NULL;
+    free(X->dims);
     free(X);
     
-    double score = (-N/2)*log(var) - log(N)*(P+1)/2;
-    
-    printf(" \n HERE %d\n");
-    
+
+    double score = -(N/2)*log(var);  - log(N)*(P+1)/2;
+
+    /* printf("( %d ) ===> (", v->id); */
+    /* for (int i = 0; i < v->num_parents; i++) */
+    /* 	{ */
+    /* 	    printf(" %d", v->parents[i]->id); */
+    /* 	}	     */
+    /* printf(" ) VAR: %f \n", var); */
     return score;
 }
 
+
+double graph_score(DAG *G, double (*ScoreFunc)(vertex*))
+{
+    double score = 0;
+    for (int i = 0; i < G->num_nodes; i++)
+	{
+	    score += (*ScoreFunc)(&(G->nodes[i]));
+	}
+    return score;
+}
 
 

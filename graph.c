@@ -17,11 +17,6 @@
 // So, vertex.graph.parents makes sense. We can easily union and manipulate graphs with this since vertices are ultimately just
 // locations in memory and not able to be copied, only pointed to.
 
-DAG *unicycle_graph();
-DAG *nocycle_graph();
-DAG *disjoint_1cycle_graph();
-int graph_test();
-
 
 void delete_edge(vertex *v, vertex *child)
 {    
