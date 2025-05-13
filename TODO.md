@@ -1,6 +1,7 @@
 # TODO
 Things that require somewhat immediate attention:
 
+	(0) Find the memleak.
 	(1) linalg.c Fix/merge together operations in variance_of_residuals.
 	(2) Serpate VOR into seperate residual computation and linear regression functions. 
 	(2) io.c: Support float 32
