@@ -24,9 +24,9 @@ matrix *matmul(matrix * A, matrix * B)
 	{
 	    C->data[i] = calloc(C->dims[1], sizeof(double));
 	    
-	    for (int j = 0; j < B->dims[0]; j++)
+	    for (int k = 0; k < B->dims[1]; k++)
 		{
-		    for (int k = 0; k < B->dims[1]; k++)
+		    for (int j = 0; j < A->dims[1]; j++)
 			{
 			    C->data[i][k] += A->data[i][j]*B->data[j][k];
 			}
@@ -89,7 +89,29 @@ void arraycpy(double **Copy, double **A, int *dims)
 }
 
 
+DAG *init_graph(matrix *data)  // Each row of data are observations for a feature. 
+{
+    int num_nodes = data->dims[0];
+    DAG *G = malloc(sizeof(*G));
+    G->nodes = malloc(num_nodes*sizeof(vertex));
+    G->num_nodes = num_nodes;
+    for (int i = 0; i < num_nodes; i++)
+	{
+	    G->nodes[i].id = i;
+
+	    G->nodes[i].num_parents = 0;
+	    G->nodes[i].parents = malloc(num_nodes * sizeof(vertex*));
 	    
+	    G->nodes[i].num_children = 0;
+	    G->nodes[i].children = malloc(num_nodes * sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT, FIX LATER.
+
+	    G->nodes[i].data = data->data[i];
+	    G->nodes[i].num_samples = data->dims[1];
+	}
+    
+    return G;
+}
+
 
 void free_graph(DAG *G)
 {

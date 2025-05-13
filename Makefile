@@ -1,5 +1,4 @@
-main: main.c
-	gcc -g -Wno-unused-result -O0 -Wall main.c linalg.c io.c graph.c score_functions.c utils.c -lm -o main
-	./main
-
-.PRECIOUS: main
+CFLAGS := -g -O3 -Wall -Iinclude
+CC := gcc
+main: src/main.c
+	$(CC) $(CFLAGS) src/*.c -lm -o main

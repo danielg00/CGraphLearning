@@ -1,89 +1,56 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <math.h>
-#include <assert.h>
-#include <time.h>
-
 
 #include "linalg.h"
-#include "io.h"
 #include "graph.h"
 #include "score_functions.h"
 
-#define MAX_ITERS 1000
-
-DAG *init_graph(matrix *data);
-int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *));
-int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFunc)(vertex *), double *max_delta);
-
-// Current problems: structurally seems to be doing OK, but there are some numerical problems.
-int main()
+double BIC_score(vertex *v)
 {
-    char * fname = "test_data/test_structured2.npy";
+    // Let N be the number of samples and var be the variance of the residuals of vertex v given its P parents.
+    // Then BIC(v) = -(N/2)*log(var) - log(N)*(P+2)/2
+    int P = v->num_parents;
+    int N = v->num_samples;
+
     
-    matrix *A = load_matrix_from_file(fname);  // features x samples
-    
-    DAG *G = init_graph(A);
-    
-    int opt[3];  // opt = {v1, v2, mod_type}
-    int mod = 1;
-    int i = 0;
-    
-    srand(time(NULL));
-    
-    while (i < MAX_ITERS || mod == 0)
+    if (P == 0)
 	{
-	    printf("\n ############## EPOCH %d ##############\n", i);
-	    
-	    mod = find_best_mod(G, opt, &BIC_score);
-	    printf("mods found: %d", mod);
-
-	    printf(" (%d, %d, %d) \n", opt[0], opt[1], opt[2]);
-	    if (mod == 0)
-		{
-		    printf("FINAL GRAPH: "); print_graph(G);
-			
-		    printf("CONVERGED");
-		    return 0;
-		}
-	    
-	    // Applying the best option
-	    if (opt[2] == 0) // Apply edge deletion
-		{
-		    delete_edge(&(G->nodes[opt[0]]), &(G->nodes[opt[1]]));
-		    /* printf("Total mods: %d, Best is delete edge ( %d ) between ( %d ) ", mod, opt[0], opt[1]); */
-		    /* printf("With score of %f\n", BIC_score( &(G->nodes[opt[0]]) ) + BIC_score( &(G->nodes[opt[1]]) ) ); */
-		}
-	    
-	    else  // else add or reverse and edge.
-		{
-		    if(opt[2] == -1) // reverse the edge
-			{
-			    delete_edge(&(G->nodes[opt[1]]), &(G->nodes[opt[0]]));
-			    add_child(&(G->nodes[opt[0]]), &(G->nodes[opt[1]]));		    
-			    /* printf("Total mods: %d, Best is reverse edge ( %d ) --> ( %d ) ", mod, opt[0], opt[1]); */
-			    /* printf("With score of %f\n", BIC_score( &(G->nodes[opt[0]]) ) + BIC_score( &(G->nodes[opt[1]]) ) ); */
-			}
-		    
-		    else  // Add and edge
-			{
-			    add_child(&(G->nodes[opt[0]]), &(G->nodes[opt[1]]));		    
-			    /* printf("Total mods: %d, Best is add edge ( %d ) --> ( %d ) ", mod, opt[0], opt[1]); */
-			    /* printf("With score of %f\n", BIC_score( &(G->nodes[opt[0]]) ) + BIC_score( &(G->nodes[opt[1]]) ) ); */
-			}
-		}
-	    
-	    print_graph(G);
-	    printf("\n#### CURRENT SCORE: %f \n", graph_score(G, *BIC_score));
-
-	    i++;
+	    return log(N);
 	}
-        
-    freeMatrix(A);	
-    return 0;
+
+    matrix *X = malloc(sizeof(*X));
+    X->dims = malloc(2  * sizeof(int));
+    X->dims[0] = P;
+    X->dims[1] = N;
+    
+    X->data = malloc(P * sizeof(double*));
+	
+    for (int i = 0; i < P; i++)
+	{
+	    X->data[i] = v->parents[i]->data; // This simply points to the original data, we don't want to modify what it points to. 
+	}
+    
+    double var = variance_of_residuals(X, v->data);
+    
+    free(X->data);
+    free(X->dims);
+    free(X);
+    
+    double score = -(N/2)*log(var) - log(N)*(P+2)/2;
+    return score;
 }
 
+
+double graph_score(DAG *G, double (*ScoreFunc)(vertex*))
+{
+    double score = 0;
+    for (int i = 0; i < G->num_nodes; i++)
+	{
+	    score += (*ScoreFunc)(&(G->nodes[i]));
+	}
+    return score;
+}
 
 
 int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Returns 0 if no best mod was found
@@ -100,13 +67,14 @@ int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Return
     // chosen with the corresponding modification.
     // We want to avoid checking for cycles, calling is_child, and calling scoreFunc
     // too much because these are relatively expensive.
-
+    //
     //
     // Modifies options to specify information for the best modification type:
     //    options = {index1, index2, mod_type}
     //    Where index1 index2 are the indices specifying vertices v1, v2, whose edge is to be modified.
     //    And where mod_type == 1: if v1 --> v2 is best option.
     //              mod_type == 0: if v1 v2 is to have no connecting edge.
+    //              mod_type == -1:if v2 --> v1 is the best option.
 
     
     double max_delta = 0.;  // The modification with the largest value score_diff is the 'chosen one'.
@@ -117,16 +85,13 @@ int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Return
 	    for (int j = i+1; j < G->num_nodes; j++)
 		{
 		    vertex *v1 = &(G->nodes[i]); vertex *v2 = &(G->nodes[j]);
-		    // Two vertices can either be connected or not-connected,
-		    // Calling is_child is O(n) so we want to avoid constantly doing that.
-		    // We also want to skip over cases that cause cycles.
 		    
+		    // Two vertices can either be connected or not-connected,
 		    if (is_child(v1, v2))
 			{
 			    num_mods += best_mod_if_connected(v1, v2, option, scoreFunc, &max_delta); 
 			}
 
-		    
 		    else if(is_child(v2, v1))
 			{
 			    num_mods +=  best_mod_if_connected(v2, v1, option, scoreFunc, &max_delta);
@@ -137,8 +102,8 @@ int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Return
 		    else  
 			{
 			    double old_score;
-			    double delta_for_12 = max_delta;
-			    double delta_for_21 = max_delta;
+			    double delta_for_12 = 0;
+			    double delta_for_21 = 0;
 			    
 			    old_score = (*scoreFunc)(v1) + (*scoreFunc)(v2);
 
@@ -159,17 +124,17 @@ int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Return
 			    else  { continue; }  // Adding an edge either way causes a cycle so continue.
 			    
 
-			    if (delta_for_12 < max_delta && delta_for_21 < max_delta)  // Neither changes are better.
+			    if (delta_for_12 < max_delta && delta_for_21 < max_delta)  // No change is best.
 				{
 				    continue;
 				}
-			    else if (delta_for_12 >= delta_for_21)  {  // v2 --> v1 is best choice.
+			    else if (delta_for_12 > delta_for_21)  {  // v1 --> v2 is best choice.
 				num_mods += 1; 
 				option[0] = i; option[1] = j; option[2] = 1;
-				max_delta = delta_for_12;
+ 				max_delta = delta_for_12;
 			    }
 
-			    else {  // v1 --> v2 is best choice.
+			    else {  // v2 --> v1 is best choice.
 				num_mods += 1;
 				option[0] = j; option[1] = i; option[2] = 1;
 				max_delta = delta_for_21;
@@ -215,7 +180,7 @@ int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFun
 	    else if (delta_for_delete <= delta_for_reverse )  // Reversing the edge was best option.
 		{
 		    *max_delta = delta_for_reverse;
-		    option[0] = v2->id; option[1] = v1->id; option[2] = -1;
+		    option[0] = v1->id; option[1] = v2->id; option[2] = -1;
 		    
 		    delete_edge(v2, v1); add_child(v1, v2);
 		    return 1;
@@ -250,33 +215,3 @@ int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFun
     
     return 0;
 }
-
-
-
-
-DAG *init_graph(matrix *data)  // Each row of data are observations for a feature. 
-{
-    int num_nodes = data->dims[0];
-    DAG *G = malloc(sizeof(*G));
-    G->nodes = malloc(num_nodes*sizeof(vertex));
-    G->num_nodes = num_nodes;
-    for (int i = 0; i < num_nodes; i++)
-	{
-	    G->nodes[i].id = i;
-
-	    G->nodes[i].num_parents = 0;
-	    G->nodes[i].parents = calloc(num_nodes, sizeof(vertex*));
-	    
-	    G->nodes[i].num_children = 0;
-	    G->nodes[i].children = calloc(num_nodes, sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT.
-
-	    G->nodes[i].data = data->data[i];
-	    G->nodes[i].num_samples = data->dims[1];
-
-	    G->nodes[i].calc_score_needed = 1;
-		
-	}
-    return G;
-}
-
-
