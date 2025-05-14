@@ -70,23 +70,17 @@ int * LU_decomposition(matrix *copy_A, double *** ptrL, double *** ptrU)
     /* LU decomposition with partial pivoting. (see https://en.wikipedia.org/wiki/LU_decomposition)
        Computes lower and upper triangular matrices, L and U, so that mathmul(L, U) = A
 
-       TODO:
-       - Check if matrix is singular.
-
-       Creates: (1) pointer to int array `pivots`
-
-       Returns: (2) pointer to int array `pivots`
+       Functions allocations memory for L, and U, and Pivots. Caller should free these when finished.  
     */
 
-    
     int D = copy_A->dims[0];
     *ptrL = malloc(D*sizeof(double *)), *ptrU = malloc(D*sizeof(double *));
     int *pivots;
     
     for (int i = 0; i < D; i++)
 	{
-	    (*ptrL)[i] = calloc(D, sizeof(double));                           // Learned the hard way that its safer to make them square.
-	    (*ptrL)[i][i] = 1.0;	                                      // initialise lower triangular matrix with identity on diagonal.
+	    (*ptrL)[i] = calloc(D, sizeof(double));         
+	    (*ptrL)[i][i] = 1.0;	        
 
 	    (*ptrU)[i] = calloc(D, sizeof(double));
 	}
@@ -125,11 +119,16 @@ int * LU_decomposition(matrix *copy_A, double *** ptrL, double *** ptrU)
 	    pivots[n] = pivots[max_val_index];
 	    pivots[max_val_index] = j;
 	}
-   
 
+    
     /* ====== LU decomposition - Doolittle's algorithm. ======*/
     for (int n = 0; n < D; n++)
 	{
+	    if (copy_A->data[n][n] < 1e-12)                               // matrix is singular
+        {
+            pivots[0] = -1;
+            return pivots;
+        }
 	    (*ptrU)[n][n] = copy_A->data[n][n];
 	    for (int i = n + 1; i < D; i++)
 		{
@@ -145,7 +144,7 @@ int * LU_decomposition(matrix *copy_A, double *** ptrL, double *** ptrU)
 			}
 		}
 	}
-
+    
     return pivots;
 }
 
