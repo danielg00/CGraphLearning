@@ -133,7 +133,7 @@ int * LU_decomposition(matrix *copy_A, double *** ptrL, double *** ptrU)
 	    (*ptrU)[n][n] = copy_A->data[n][n];
 	    for (int i = n + 1; i < D; i++)
 		{
-		    (*ptrL)[i][n] = (1/copy_A->data[n][n])*copy_A->data[i][n];          // L[n+1:, n] = l
+		    (*ptrL)[i][n] = (1/copy_A->data[n][n])*copy_A->data[i][n];     // L[n+1:, n] = l
 		    (*ptrU)[n][i] = copy_A->data[n][i];                            // U[n, n+1:] = u
 		}
 	    // A = A - outer_product(l, u)
@@ -184,14 +184,16 @@ void solve_Ax_b(double **A, double **b, int D, int upper)
 	}
 }
 
-
-		
-double variance_of_residuals(matrix *X, double *Y)
+void linear_regression(matrix *X, double *Y, double *betas, double *intercept)
 {
     // We first calculate the regression coefficients by solving B = [(X.T X)^-1] X.T y
     // We then get the variance of the residuals.
 
-    matrix *Inv, *XtX, *C;
+    // The proceeding code looks different than the expression above. This is mainly
+    // because the inverse (X.T X^-1) is transposed and X is tranposed for speed.
+    // We first obtain Z = `X`@`Y`, and then compute Z.T @ Inv. 
+
+    matrix *Inv, *XtX;
 
     XtX = malloc(sizeof(*XtX));
     XtX->dims = malloc(2 * sizeof(int));
@@ -210,7 +212,6 @@ double variance_of_residuals(matrix *X, double *Y)
 	{
 	    for (int j = i; j < X->dims[0]; j++)
 		{
-		    dot = 0;
 		    for (int k = 0; k < X->dims[1]; k++)
 			{
 			    XtX->data[i][j] += X->data[i][k]*X->data[j][k];
@@ -220,23 +221,31 @@ double variance_of_residuals(matrix *X, double *Y)
 	}
     
     Inv = invert_matrix(XtX);
-    // `Inv` is transposed as well as X. So instead of transposing X, we intead multiply X.
-    // FIX LATER.
-    C = matmul(Inv, X);
-	
     
-    double betas[X->dims[0]];  // Slopes
-    
+    double XtY[X->dims[0]];
+    memset(XtY, 0., X->dims[0] * sizeof(double));
     for (int i = 0; i < X->dims[0]; i++)
 	{
-	    dot = 0;
 	    for (int j = 0; j < X->dims[1]; j++)
 		{
-		    dot += Y[j]*C->data[i][j];
+		    XtY[i] += X->data[i][j]*Y[j];
 		}
-	    betas[i] = dot;
 	}
+
+    // Our inverse is also tranposed, so we need to multiply XtY by the columns of Inv.
+    // Its a bit more cache efficient iteratively build each element of Betas
+    // so that we stay on the same row in Inv.
     
+    /* double betas[X->dims[0]] */;  // our regression coefficients.
+    memset(betas, 0., X->dims[0] * sizeof(double));
+    for (int i = 0; i < Inv->dims[0]; i++)
+	{
+	    for (int j = 0; j < Inv->dims[1]; j++)
+		{
+		    betas[j] += XtY[i]*Inv->data[i][j];
+		}
+	}
+
     // Calculating intercept: mean(Y) - mean(Beta*X)
     double mu_Y = 0;
     for (int i = 0; i < X->dims[1]; i++) {mu_Y += Y[i]; }
@@ -252,12 +261,23 @@ double variance_of_residuals(matrix *X, double *Y)
 	    mu_XB *= betas[i]/X->dims[1];
 	}
 
-    double intercept = mu_Y - mu_XB;
+    *intercept = mu_Y - mu_XB;
 
+    
+    freeMatrix(Inv);
+    freeMatrix(XtX);
+}
+		
+double variance_of_residuals(matrix *X, double *Y)
+{
+    double betas[X->dims[0]]; double intercept;
+    
+    linear_regression(X, Y, betas, &intercept);
     // Calculate the variance of residuals.
     double VOR;
     VOR = 0;
 
+    double dot;
     for (int i = 0; i < X->dims[1]; i++)
 	{
 	    dot = 0;
@@ -269,12 +289,7 @@ double variance_of_residuals(matrix *X, double *Y)
 	}
     
     VOR /= (X->dims[1] + 1);
-
-    freeMatrix(Inv);
-    freeMatrix(XtX);
-    freeMatrix(C);
     
     return VOR;
-
 }
     

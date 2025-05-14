@@ -91,19 +91,20 @@ void arraycpy(double **Copy, double **A, int *dims)
 
 DAG *init_graph(matrix *data)  // Each row of data are observations for a feature. 
 {
-    int num_nodes = data->dims[0];
     DAG *G = malloc(sizeof(*G));
-    G->nodes = malloc(num_nodes*sizeof(vertex));
-    G->num_nodes = num_nodes;
-    for (int i = 0; i < num_nodes; i++)
+    
+    G->num_nodes = data->dims[0];
+    G->nodes = malloc(G->num_nodes * sizeof(vertex));
+    
+    for (int i = 0; i < G->num_nodes; i++)
 	{
 	    G->nodes[i].id = i;
 
 	    G->nodes[i].num_parents = 0;
-	    G->nodes[i].parents = malloc(num_nodes * sizeof(vertex*));
+	    G->nodes[i].parents = malloc(G->num_nodes * sizeof(vertex*));
 	    
 	    G->nodes[i].num_children = 0;
-	    G->nodes[i].children = malloc(num_nodes * sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT, FIX LATER.
+	    G->nodes[i].children = malloc(G->num_nodes * sizeof(vertex*)); // 2X Maximum size of graph; REALLY MEMORY INEFFICIENT, FIX LATER.
 
 	    G->nodes[i].data = data->data[i];
 	    G->nodes[i].num_samples = data->dims[1];
@@ -120,7 +121,7 @@ void free_graph(DAG *G)
 	{
 	    free(G->nodes[i].children);
 	    free(G->nodes[i].parents);
-
+	    free(G->nodes[i].data);
 	}
     free(G->nodes);
     free(G);
@@ -129,7 +130,7 @@ void free_graph(DAG *G)
 
 void print_graph(DAG *G)
 {
-    printf("G: \n"); 
+    printf("\n"); 
 
     for (int i = 0; i < G->num_nodes; i++)
 	{

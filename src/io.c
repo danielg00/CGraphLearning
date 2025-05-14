@@ -38,7 +38,7 @@ matrix *load_matrix_from_file(char *fname) {
 	    }
 	}
 
-    fgetc(f); /* HACK */
+    fgetc(f); /*one more byte */
     fscanf(f, "(%d,%d)", &(A->dims[0]), &(A->dims[1]));
 
     
@@ -57,4 +57,10 @@ matrix *load_matrix_from_file(char *fname) {
     
     fclose(f);
     return A;
+}
+
+
+void parser(char ** argv)
+{
+
 }

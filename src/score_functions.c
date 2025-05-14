@@ -28,7 +28,7 @@ double BIC_score(vertex *v)
 	
     for (int i = 0; i < P; i++)
 	{
-	    X->data[i] = v->parents[i]->data; // This simply points to the original data, we don't want to modify what it points to. 
+	    X->data[i] = v->parents[i]->data; // This simply points to the original data, we don't want to free/modify what it points to. 
 	}
     
     double var = variance_of_residuals(X, v->data);

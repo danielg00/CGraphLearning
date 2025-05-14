@@ -3,10 +3,11 @@ typedef struct vertex
     int id;
     int num_children;
     int num_parents;
+    int num_samples;
+    
     struct vertex **children;
     struct vertex **parents;
-    double * data;
-    int num_samples;
+    double * data;  // todo: change to `samples`
 
 } vertex;
 
