@@ -8,38 +8,6 @@
 #include "score_functions.h"
 #include "utils.h"
 
-
-/* int main() */
-/* { */
-/*     matrix *A = load_matrix_from_file("test_data/test_structured.npy");  // features x samples */
-/*     DAG *G = init_graph(A); */
-/*     add_child(&(G->nodes[1]), &(G->nodes[0])); */
-/*     add_child(&(G->nodes[2]), &(G->nodes[0])); */
-/*     add_child(&(G->nodes[3]), &(G->nodes[0])); */
-/*     vertex *v = &(G->nodes[0]); */
-				      
-/*     int P = v->num_parents; */
-/*     int N = v->num_samples; */
-
-/*     matrix *X = malloc(sizeof(*X)); */
-/*     X->dims = malloc(2  * sizeof(int)); */
-/*     X->dims[0] = P; */
-/*     X->dims[1] = N; */
-    
-/*     X->data = malloc(P * sizeof(double*)); */
-	
-/*     for (int i = 0; i < P; i++) */
-/* 	{ */
-/* 	    X->data[i] = v->parents[i]->data; // This simply points to the original data, we don't want to free/modify what it points to.  */
-/* 	} */
-
-/*     double betas[X->dims[0]]; double intercept; */
-/*     linear_regression(X, v->data, betas, &intercept); */
-
-/*     for (int i = 0; i < P; i++) { printf(" b%f ", betas[i]);} */
-/*     return 0; */
-/* } */
-
 int main(int arvc, char *argv[])
 {   
     char *p;
