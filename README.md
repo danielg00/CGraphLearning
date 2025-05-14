@@ -1,6 +1,7 @@
 # USAGE:
 
 `make -B`
+
 `./main path_to_data MAX_ITERS`
 
 Note that the data should be in a .npy file with format n_features x n_samples (as opposed to the standard n_samples x n_features).
