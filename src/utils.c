@@ -114,14 +114,13 @@ DAG *init_graph(matrix *data)  // Each row of data are observations for a featur
 }
 
 
-void free_graph(DAG *G)
+void free_graph(DAG *G)  // deletes graph structure, not data tied to it.
 {
     int D = G->num_nodes;
     for (int i = 0; i < D; i++)
 	{
 	    free(G->nodes[i].children);
 	    free(G->nodes[i].parents);
-	    free(G->nodes[i].data);
 	}
     free(G->nodes);
     free(G);

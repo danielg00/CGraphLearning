@@ -28,6 +28,7 @@ int main(int arvc, char *argv[])
 	    
 	    mod = find_best_mod(G, opt, &BIC_score);
 	    printf("\n   Modications found: %d", mod);
+	    printf("\n (%d, %d, %d)", opt[0],  opt[1], opt[2]);
 
 	    if (mod == 0)
 		{
@@ -61,6 +62,7 @@ int main(int arvc, char *argv[])
 		}
 	    
 	    printf("\n   CURRENT SCORE: %f\n", graph_score(G, *BIC_score));
+	    print_graph(G);
 
 	    i++;
 	}
@@ -68,6 +70,6 @@ int main(int arvc, char *argv[])
     print_graph(G);
 
     free_graph(G);
-    freeMatrix(A);	
+    freeMatrix(A);
     return 0;
 }

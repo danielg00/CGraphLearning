@@ -9,7 +9,7 @@ int * LU_decomposition(matrix * A, double *** L, double *** U);
 matrix * invert_matrix(matrix * A);
 void solve_Ax_b(double **A, double **b, int D, int upper);
 
-void linear_regression(matrix *X, double *Y, double *betas, double *intercept);
+void linear_regression(matrix *X, double *Y, double *betas, double *intercept, double lambda);
 double variance_of_residuals(matrix *X, double *Y);
 
 void printArray(double **Array, int dim0, int dim1);

@@ -124,12 +124,8 @@ int * LU_decomposition(matrix *copy_A, double *** ptrL, double *** ptrU)
     /* ====== LU decomposition - Doolittle's algorithm. ======*/
     for (int n = 0; n < D; n++)
 	{
-	    if (copy_A->data[n][n] < 1e-12)                               // matrix is singular
-        {
-            pivots[0] = -1;
-            return pivots;
-        }
 	    (*ptrU)[n][n] = copy_A->data[n][n];
+	    
 	    for (int i = n + 1; i < D; i++)
 		{
 		    (*ptrL)[i][n] = (1/copy_A->data[n][n])*copy_A->data[i][n];     // L[n+1:, n] = l
@@ -183,14 +179,18 @@ void solve_Ax_b(double **A, double **b, int D, int upper)
 	}
 }
 
-void linear_regression(matrix *X, double *Y, double *betas, double *intercept)
+void linear_regression(matrix *X, double *Y, double *betas, double *intercept, double lambda)
 {
-    // We first calculate the regression coefficients by solving B = [(X.T X)^-1] X.T y
-    // We then get the variance of the residuals.
+    // Regression array `Y` on matrix `X` with ridge regression with penalty term lambda. Modifies betas and betas and intercept
+    // in place.
+    
+    // We first calculate the regression coefficients by solving B = [(X.T X + lambda)^-1] X.T 
 
-    // The proceeding code looks different than the expression above. This is mainly
+    // The proceeding code looks different than the expression above. This is
     // because the inverse (X.T X^-1) is transposed and X is tranposed for speed.
-    // We first obtain Z = `X`@`Y`, and then compute Z.T @ Inv. 
+    // We first obtain Z = `X`@`Y`, and then compute Z.T @ Inv.
+
+    // Modifies in place (1) `betas` for the regression coefficients
 
     matrix *Inv, *XtX;
 
@@ -214,6 +214,7 @@ void linear_regression(matrix *X, double *Y, double *betas, double *intercept)
 		    for (int k = 0; k < X->dims[1]; k++)
 			{
 			    XtX->data[i][j] += X->data[i][k]*X->data[j][k];
+			    if (i == j) {XtX->data[i][j] += lambda; continue;}
 			    XtX->data[j][i] += X->data[i][k]*X->data[j][k];
 			}
 		}
@@ -269,9 +270,9 @@ void linear_regression(matrix *X, double *Y, double *betas, double *intercept)
 		
 double variance_of_residuals(matrix *X, double *Y)
 {
-    double betas[X->dims[0]]; double intercept;
+    double betas[X->dims[0]]; double intercept; double lambda = 1e-2;
     
-    linear_regression(X, Y, betas, &intercept);
+    linear_regression(X, Y, betas, &intercept, lambda);
     // Calculate the variance of residuals.
     double VOR;
     VOR = 0;

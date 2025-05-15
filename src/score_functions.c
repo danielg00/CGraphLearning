@@ -37,7 +37,7 @@ double BIC_score(vertex *v)
     free(X->dims);
     free(X);
     
-    double score = -(N/2)*log(var) - log(N)*(P+2)/2;
+    double score = (N/2)*var - log(N)*(P+2)/2;
     return score;
 }
 
@@ -124,7 +124,7 @@ int find_best_mod(DAG *G, int *option, double (*scoreFunc)(vertex *))  // Return
 			    else  { continue; }  // Adding an edge either way causes a cycle so continue.
 			    
 
-			    if (delta_for_12 < max_delta && delta_for_21 < max_delta)  // No change is best.
+			    if (delta_for_12 <= max_delta && delta_for_21 <= max_delta)  // No change is best.
 				{
 				    continue;
 				}
@@ -154,8 +154,10 @@ int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFun
     // The local score is the change that increases the score the most.
     // If the local change increase the score than max_delta, then tentatively that change is adopted.
     // Otherwise, we continue onto next vertex pair.
-    
-    // Returns 0 if no better config was found.
+    //
+    // *This function should not modify the graph, it makes changes, checks the score, and then undoes the changes.*
+    //
+    // Returns 0 if no better config was found, else 1
 
     double delta_for_delete, delta_for_reverse;
 
@@ -164,8 +166,7 @@ int best_mod_if_connected(vertex *v1, vertex *v2, int *option, double (*scoreFun
     delete_edge(v1, v2);
     delta_for_delete = (*scoreFunc)(v2) + (*scoreFunc)(v1) - old_score;
     
-    // If a path between v1 and v2 exists after deleting, then reversing the edge causes a  cycle.
-    
+    // If a path between v1 and v2 exists after deleting their edge, then reversing the edge causes a  cycle.
     if (!check_if_path(v1 ,v1, v2)) // If there's no path, we can proceed to check score for reversed.
 	{	    
 	    add_child(v2, v1);
